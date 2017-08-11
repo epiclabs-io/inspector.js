@@ -1,0 +1,192 @@
+import BitReader from '../../utils/bit-reader';
+import PESReader from './pes-reader';
+
+enum CONTAINER_TYPE {
+    UNKNOWN = 1,
+    MPEG_TS,
+    RAW_AAC,
+}
+
+export default class MpegTSDemuxer {
+    private static MPEGTS_SYNC: number = 0x47;
+    private static MPEGTS_PACKET_SIZE: number = 187;
+
+    public tracks: { [id: string] : PESReader; };
+
+    private data: Uint8Array;
+    private dataOffset: number;
+    private lastPts: number;
+    private containerType: number;
+    private pmtParsed: boolean;
+    private packetsCount: number;
+    private pmtId: number;
+
+    constructor () {
+        this.lastPts = 0;
+        this.containerType = CONTAINER_TYPE.UNKNOWN;
+        this.pmtParsed = false;
+        this.packetsCount = 0;
+        this.pmtId = -1;
+        this.tracks = {};
+    }
+
+    public demux(data: Uint8Array): void {
+        this.resetTracks();
+        this.data = data;
+        this.dataOffset = 0;
+        this.findContainerType();
+
+        if (this.containerType === CONTAINER_TYPE.MPEG_TS) {
+            this.readHeader();
+            this.readSamples();
+        } else {
+            const dataParser: BitReader = new BitReader(this.data);
+            this.tracks[0] = new PESReader(0, PESReader.TS_STREAM_TYPE_AAC);
+            this.tracks[0].appendData(false, dataParser);
+        }
+    }
+
+    public getTracksCount(): number {
+        return (this.tracks as any).keys.length;
+    }
+
+    public resetTracks(): void {
+        for (let id in this.tracks) {
+            if (this.tracks.hasOwnProperty(id)) {
+                this.tracks[id].reset();
+            }
+        }
+    }
+    public flush(): void {
+        for (let id in this.tracks) {
+            if (this.tracks.hasOwnProperty(id)) {
+                this.tracks[id].flush();
+            }
+        }
+    }
+
+    private findContainerType(): void {
+        while (this.dataOffset < this.data.byteLength) {
+            if (this.data[this.dataOffset] === MpegTSDemuxer.MPEGTS_SYNC) {
+                this.containerType = CONTAINER_TYPE.MPEG_TS;
+                break;
+            } else if ((this.data.byteLength - this.dataOffset) >= 4) {
+                const dataRead: number = (this.data[this.dataOffset] << 8) | (this.data[this.dataOffset + 1]);
+                if (dataRead === 0x4944 || (dataRead & 0xfff6) === 0xfff0) {
+                    this.containerType = CONTAINER_TYPE.RAW_AAC;
+                    break;
+                }
+            }
+            this.dataOffset++;
+        }
+
+        if (this.containerType === CONTAINER_TYPE.UNKNOWN) {
+            throw new Error('Format not supported');
+        }
+    }
+
+    private readHeader(): void {
+        while (this.dataOffset < this.data.byteLength - 1) {
+            const byteRead: number = this.data[this.dataOffset];
+            this.dataOffset++;
+
+            if (byteRead === MpegTSDemuxer.MPEGTS_SYNC
+                && (this.data.byteLength - this.dataOffset) >= MpegTSDemuxer.MPEGTS_PACKET_SIZE) {
+
+                const packet: Uint8Array = this.data.subarray(this.dataOffset,
+                    this.dataOffset + MpegTSDemuxer.MPEGTS_PACKET_SIZE);
+                this.dataOffset += MpegTSDemuxer.MPEGTS_PACKET_SIZE;
+
+                this.processTSPacket(packet);
+
+                if (this.pmtParsed) {
+                    break;
+                }
+            }
+        }
+    }
+
+    private readSamples(): void {
+        while (this.dataOffset < this.data.byteLength - 1) {
+            const byteRead: number = this.data[this.dataOffset++];
+
+            if (byteRead === MpegTSDemuxer.MPEGTS_SYNC
+                && (this.data.byteLength - this.dataOffset) >= MpegTSDemuxer.MPEGTS_PACKET_SIZE) {
+
+                const packet: Uint8Array = this.data.subarray(this.dataOffset, this.dataOffset
+                    + MpegTSDemuxer.MPEGTS_PACKET_SIZE);
+                this.dataOffset += MpegTSDemuxer.MPEGTS_PACKET_SIZE;
+
+                this.processTSPacket(packet);
+            }
+        }
+    }
+
+    private processTSPacket(packet: Uint8Array): void {
+        this.packetsCount++;
+
+        let packetParser: BitReader = new BitReader(packet);
+        packetParser.skipBits(1);
+
+        const payloadUnitStartIndicator: boolean = (packetParser.readBits(1) !== 0);
+        packetParser.skipBits(1);
+
+        const pid: number = packetParser.readBits(13);
+        const adaptationField: number = (packetParser.readByte() & 0x30) >> 4;
+        if (adaptationField > 1) {
+            length = packetParser.readByte();
+            if (length > 0) {
+                packetParser.skipBytes(length);
+            }
+        }
+
+        if (adaptationField === 1 || adaptationField === 3) {
+            if (pid === 0) {
+                this.parseProgramId(payloadUnitStartIndicator, packetParser);
+            } else if (pid === this.pmtId) {
+                this.parseProgramTable(payloadUnitStartIndicator, packetParser);
+            } else {
+                const track: any = this.tracks[pid];
+                if (track) {
+                    track.appendData(payloadUnitStartIndicator, packetParser);
+                }
+            }
+        }
+    }
+
+    private parseProgramId(payloadUnitStartIndicator: boolean, packetParser: BitReader): void {
+        if (payloadUnitStartIndicator) {
+            packetParser.skipBytes(packetParser.readByte());
+        }
+        packetParser.skipBits(27 + 7 * 8);
+        this.pmtId = packetParser.readBits(13);
+    }
+
+    private parseProgramTable(payloadUnitStartIndicator: boolean, packetParser: BitReader): void {
+        if (payloadUnitStartIndicator) {
+            packetParser.skipBytes(packetParser.readByte());
+        }
+
+        packetParser.skipBits(12);
+        const sectionLength: number = packetParser.readBits(12);
+        packetParser.skipBits(4 + 7 * 8);
+        const programInfoLength: number = packetParser.readBits(12);
+        packetParser.skipBytes(programInfoLength);
+        let bytesRemaining: number = sectionLength - 9 - programInfoLength - 4;
+
+        while (bytesRemaining > 0) {
+            const streamType: number = packetParser.readBits(8);
+            packetParser.skipBits(3);
+            const elementaryPid: number = packetParser.readBits(13);
+            packetParser.skipBits(4);
+            const infoLength: number = packetParser.readBits(12);
+            packetParser.skipBytes(infoLength);
+            bytesRemaining -= infoLength + 5;
+            if (!this.tracks[elementaryPid]) {
+                this.tracks[elementaryPid] = new PESReader(elementaryPid, streamType);
+            }
+        }
+        this.pmtParsed = true;
+    }
+
+}
