@@ -38,14 +38,6 @@ export default class AdtsReader extends PayloadReader {
         return `Audio (AAC) - Sample Rate: ${this.sampleRate}, Channels: ${this.channels}`;
     }
 
-    public getFirstPTS(): number {
-        return this.firstTimestamp;
-    }
-
-    public getLastPTS(): number {
-        return this.timeUs;
-    }
-
     public consumeData(pts: number): void {
         if (!this.dataBuffer) {
             return;
@@ -59,7 +51,6 @@ export default class AdtsReader extends PayloadReader {
         }
 
         let offset: number = 0;
-
         while (offset < this.dataBuffer.byteLength) {
             if (this.state === AdtsReader.STATE_FIND_SYNC) {
                 offset = this.findNextSync(offset);

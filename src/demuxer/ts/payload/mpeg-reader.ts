@@ -52,14 +52,6 @@ export default class MpegReader extends PayloadReader {
         return 'MPEG Audio (MP3)';
     }
 
-    public getFirstPTS(): number {
-        return this.firstTimestamp;
-    }
-
-    public getLastPTS(): number {
-        return this.timeUs;
-    }
-
     public consumeData(pts: number): void {
         if (!this.dataBuffer) {
             return;

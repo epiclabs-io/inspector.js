@@ -48,14 +48,6 @@ export default class H264Reader extends PayloadReader {
         return `Video (H.264) - Profile: ${this.sps.profile}, Level: ${this.sps.level}, Resolution: ${this.sps.codecSize}, Encoded aspect ratio: ${this.sps.sar}, Display aspect ratio: ${this.sps.presentSize}`;
     }
 
-    public getFirstPTS(): number {
-        return this.firstTimestamp;
-    }
-
-    public getLastPTS(): number {
-        return this.timeUs;
-    }
-
     public consumeData(pts: number): void {
         if (!this.dataBuffer) {
             return;

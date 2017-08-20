@@ -44,11 +44,11 @@ export default class PayloadReader {
     }
 
     public getFirstPTS(): number {
-        return 0;
+        return this.firstTimestamp;
     }
 
     public getLastPTS(): number {
-        return 0;
+        return this.timeUs;
     }
 
     public getFormat(): string {
