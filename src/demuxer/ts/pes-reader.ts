@@ -88,4 +88,11 @@ export default class PESReader {
             this.payloadReader.flush();
         }
     }
+
+    public getMimeType(): string {
+        if (this.payloadReader) {
+            return this.payloadReader.getMimeType();
+        }
+        return '';
+    }
 }

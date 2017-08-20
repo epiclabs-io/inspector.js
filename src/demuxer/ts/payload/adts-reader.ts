@@ -1,6 +1,7 @@
 import BitReader from '../../../utils/bit-reader';
 import PayloadReader from './payload-reader';
 import Frame from '../../frame';
+import Track from '../../track';
 
 export default class AdtsReader extends PayloadReader {
     private static ADTS_HEADER_SIZE: number = 5;
@@ -30,7 +31,7 @@ export default class AdtsReader extends PayloadReader {
     }
 
     public getMimeType(): string {
-        return 'audio/mp4a-latm';
+        return Track.MIME_TYPE_AAC;
     }
 
     public getFormat(): string {

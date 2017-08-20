@@ -1,9 +1,10 @@
 import PayloadReader from './payload-reader';
+import Track from '../../track';
 
 export default class ID3Reader extends PayloadReader {
 
     public getMimeType(): string {
-        return 'application/id3';
+        return Track.MIME_TYPE_ID3;
     }
 
     public getFormat(): string {

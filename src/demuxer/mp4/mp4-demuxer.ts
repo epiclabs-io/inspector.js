@@ -1,11 +1,12 @@
 import ByteParserUtils from '../../utils/byte-parser-utils';
 import { boxesParsers } from './atoms';
 import { Atom, ContainerAtom } from './atoms/atom';
-import { Mp4Track } from './mp4-track';
+import Track from '../track';
+import Mp4Track from './mp4-track';
 import { Tkhd } from './atoms/tkhd';
 
 export default class Mp4Demuxer {
-    public tracks: { [id: string] : Mp4Track; };
+    public tracks: { [id: number] : Track; };
 
     private data: Uint8Array;
     private lastPts: number;
@@ -53,9 +54,7 @@ export default class Mp4Demuxer {
                 (atom as ContainerAtom).atoms = this.parseAtoms(boxData, (atom as ContainerAtom).containerDataOffset);
             }
             atoms.push(atom);
-
             this.processAtom(atom);
-
             dataOffset = end;
         }
         return atoms;
@@ -69,19 +68,22 @@ export default class Mp4Demuxer {
 
             case Atom.avcC:
                 if (this.lastTrackId > 0) {
-                    this.tracks[this.lastTrackId] = new Mp4Track(this.lastTrackId, Mp4Track.MP4_TRACK_H264, atom);
+                    this.tracks[this.lastTrackId] = new Mp4Track(this.lastTrackId,
+                        Track.TYPE_VIDEO, Track.MIME_TYPE_AVC, atom);
                 }
                 break;
 
             case Atom.hvcC:
                 if (this.lastTrackId > 0) {
-                    this.tracks[this.lastTrackId] = new Mp4Track(this.lastTrackId, Mp4Track.MP4_TRACK_H265, atom);
+                    this.tracks[this.lastTrackId] = new Mp4Track(this.lastTrackId,
+                        Track.TYPE_VIDEO, Track.MIME_TYPE_HEVC, atom);
                 }
                 break;
 
             case Atom.mp4a:
                 if (this.lastTrackId > 0) {
-                    this.tracks[this.lastTrackId] = new Mp4Track(this.lastTrackId, Mp4Track.MP4_TRACK_AAC, atom);
+                    this.tracks[this.lastTrackId] = new Mp4Track(this.lastTrackId,
+                        Track.TYPE_AUDIO, Track.MIME_TYPE_AAC, atom);
                 }
                 break;
         }

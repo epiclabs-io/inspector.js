@@ -3,6 +3,7 @@ import PayloadReader from './payload-reader';
 import Frame from '../../frame';
 import SPSParser from '../../../codecs/h264/sps-parser';
 import {Sps} from '../../../codecs/h264/nal-units';
+import Track from '../../track';
 
 enum NAL_UNIT_TYPE {
     SLICE = 1,
@@ -40,7 +41,7 @@ export default class H264Reader extends PayloadReader {
     }
 
     public getMimeType(): string {
-        return 'video/avc';
+        return Track.MIME_TYPE_AVC;
     }
 
     public getFormat(): string {

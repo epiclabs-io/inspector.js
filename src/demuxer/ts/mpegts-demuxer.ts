@@ -1,5 +1,7 @@
 import BitReader from '../../utils/bit-reader';
 import PESReader from './pes-reader';
+import TSTrack from './ts-track';
+import Track from '../track';
 
 enum CONTAINER_TYPE {
     UNKNOWN = 1,
@@ -11,7 +13,7 @@ export default class MpegTSDemuxer {
     private static MPEGTS_SYNC: number = 0x47;
     private static MPEGTS_PACKET_SIZE: number = 187;
 
-    public tracks: { [id: string] : PESReader; };
+    public tracks: { [id: number] : Track; };
 
     private data: Uint8Array;
     private dataOffset: number;
@@ -41,8 +43,9 @@ export default class MpegTSDemuxer {
             this.readSamples();
         } else {
             const dataParser: BitReader = new BitReader(this.data);
-            this.tracks[0] = new PESReader(0, PESReader.TS_STREAM_TYPE_AAC);
-            this.tracks[0].appendData(false, dataParser);
+            this.tracks[0] = new TSTrack(0, Track.TYPE_AUDIO, Track.MIME_TYPE_AAC,
+                new PESReader(0, PESReader.TS_STREAM_TYPE_AAC));
+            (this.tracks[0] as TSTrack).pes.appendData(false, dataParser);
         }
     }
 
@@ -53,14 +56,14 @@ export default class MpegTSDemuxer {
     public resetTracks(): void {
         for (let id in this.tracks) {
             if (this.tracks.hasOwnProperty(id)) {
-                this.tracks[id].reset();
+                (this.tracks[0] as TSTrack).pes.reset();
             }
         }
     }
     public flush(): void {
         for (let id in this.tracks) {
             if (this.tracks.hasOwnProperty(id)) {
-                this.tracks[id].flush();
+                (this.tracks[0] as TSTrack).pes.flush();
             }
         }
     }
@@ -146,9 +149,9 @@ export default class MpegTSDemuxer {
             } else if (pid === this.pmtId) {
                 this.parseProgramTable(payloadUnitStartIndicator, packetParser);
             } else {
-                const track: any = this.tracks[pid];
-                if (track) {
-                    track.appendData(payloadUnitStartIndicator, packetParser);
+                const track: TSTrack = this.tracks[pid] as TSTrack;
+                if (track && track.pes) {
+                    track.pes.appendData(payloadUnitStartIndicator, packetParser);
                 }
             }
         }
@@ -183,10 +186,10 @@ export default class MpegTSDemuxer {
             packetParser.skipBytes(infoLength);
             bytesRemaining -= infoLength + 5;
             if (!this.tracks[elementaryPid]) {
-                this.tracks[elementaryPid] = new PESReader(elementaryPid, streamType);
+                const pes: PESReader = new PESReader(elementaryPid, streamType);
+                this.tracks[elementaryPid] = new TSTrack(elementaryPid, '', '', pes);
             }
         }
         this.pmtParsed = true;
     }
-
 }
