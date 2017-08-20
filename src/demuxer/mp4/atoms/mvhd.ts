@@ -1,4 +1,4 @@
-import Mp4ParserUtils from '../mp4-parser-utils';
+import ByteParserUtils from '../../../utils/byte-parser-utils';
 import {Atom} from './atom';
 
 export class Mvhd extends Atom {
@@ -27,43 +27,43 @@ export class Mvhd extends Atom {
         let offset: number = 4;
         if (mvhd.version === 1) {
             offset += 4;
-            mvhd.creationTime = Mp4ParserUtils.parseMp4Date(Mp4ParserUtils.parseUint32(data, offset));
+            mvhd.creationTime = ByteParserUtils.parseIsoBoxDate(ByteParserUtils.parseUint32(data, offset));
             offset += 8;
-            mvhd.modificationTime = Mp4ParserUtils.parseMp4Date(Mp4ParserUtils.parseUint32(data, offset));
+            mvhd.modificationTime = ByteParserUtils.parseIsoBoxDate(ByteParserUtils.parseUint32(data, offset));
             offset += 4;
-            mvhd.timescale = Mp4ParserUtils.parseUint32(data, offset);
+            mvhd.timescale = ByteParserUtils.parseUint32(data, offset);
             offset += 8;
-            mvhd.duration = Mp4ParserUtils.parseUint32(data, offset);
+            mvhd.duration = ByteParserUtils.parseUint32(data, offset);
         } else {
-            mvhd.creationTime = Mp4ParserUtils.parseMp4Date(Mp4ParserUtils.parseUint32(data, offset));
+            mvhd.creationTime = ByteParserUtils.parseIsoBoxDate(ByteParserUtils.parseUint32(data, offset));
             offset += 4;
-            mvhd.modificationTime = Mp4ParserUtils.parseMp4Date(Mp4ParserUtils.parseUint32(data, offset));
+            mvhd.modificationTime = ByteParserUtils.parseIsoBoxDate(ByteParserUtils.parseUint32(data, offset));
             offset += 4;
-            mvhd.timescale = Mp4ParserUtils.parseUint32(data, offset);
+            mvhd.timescale = ByteParserUtils.parseUint32(data, offset);
             offset += 4;
-            mvhd.duration = Mp4ParserUtils.parseUint32(data, offset);
+            mvhd.duration = ByteParserUtils.parseUint32(data, offset);
         }
         offset += 4;
-        mvhd.rate = Mp4ParserUtils.parseUint16(data, offset) +
-            Mp4ParserUtils.parseUint16(data, offset + 2) / 16;
+        mvhd.rate = ByteParserUtils.parseUint16(data, offset) +
+            ByteParserUtils.parseUint16(data, offset + 2) / 16;
         offset += 4;
         mvhd.volume = data[offset] + data[offset + 1] / 8;
         offset += 12;
         mvhd.matrix = new Uint32Array(data.subarray(offset, offset + (9 * 4)));
         offset += 9 * 4;
-        mvhd.previewtime = Mp4ParserUtils.parseUint32(data, offset);
+        mvhd.previewtime = ByteParserUtils.parseUint32(data, offset);
         offset += 4;
-        mvhd.previewDuration = Mp4ParserUtils.parseUint32(data, offset);
+        mvhd.previewDuration = ByteParserUtils.parseUint32(data, offset);
         offset += 4;
-        mvhd.posterTime = Mp4ParserUtils.parseUint32(data, offset);
+        mvhd.posterTime = ByteParserUtils.parseUint32(data, offset);
         offset += 4;
-        mvhd.selectionTime = Mp4ParserUtils.parseUint32(data, offset);
+        mvhd.selectionTime = ByteParserUtils.parseUint32(data, offset);
         offset += 4;
-        mvhd.selectionDuration = Mp4ParserUtils.parseUint32(data, offset);
+        mvhd.selectionDuration = ByteParserUtils.parseUint32(data, offset);
         offset += 4;
-        mvhd.currentTime = Mp4ParserUtils.parseUint32(data, offset);
+        mvhd.currentTime = ByteParserUtils.parseUint32(data, offset);
         offset += 4;
-        mvhd.nextTrackId = Mp4ParserUtils.parseUint32(data, offset);
+        mvhd.nextTrackId = ByteParserUtils.parseUint32(data, offset);
         return mvhd;
     }
 }

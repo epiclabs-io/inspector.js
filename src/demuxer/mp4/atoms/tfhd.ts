@@ -1,4 +1,4 @@
-import Mp4ParserUtils from '../mp4-parser-utils';
+import ByteParserUtils from '../../../utils/byte-parser-utils';
 import {Atom} from './atom';
 
 export class Tfhd extends Atom {
@@ -24,23 +24,23 @@ export class Tfhd extends Atom {
 
         let offset: number = 8;
         if (baseDataOffsetPresent) {
-            tfhd.baseDataOffset = Mp4ParserUtils.parseLong64(data, 12);
+            tfhd.baseDataOffset = ByteParserUtils.parseLong64(data, 12);
             offset += 8;
         }
         if (sampleDescriptionIndexPresent) {
-            tfhd.sampleDescriptionIndex = Mp4ParserUtils.parseUint32(data, offset);
+            tfhd.sampleDescriptionIndex = ByteParserUtils.parseUint32(data, offset);
             offset += 4;
         }
         if (defaultSampleDurationPresent) {
-            tfhd.defaultSampleDuration = Mp4ParserUtils.parseUint32(data, offset);
+            tfhd.defaultSampleDuration = ByteParserUtils.parseUint32(data, offset);
             offset += 4;
         }
         if (defaultSampleSizePresent) {
-            tfhd.defaultSampleSize = Mp4ParserUtils.parseUint32(data, offset);
+            tfhd.defaultSampleSize = ByteParserUtils.parseUint32(data, offset);
             offset += 4;
         }
         if (defaultSampleFlagsPresent) {
-            tfhd.defaultSampleFlags = Mp4ParserUtils.parseUint32(data, offset);
+            tfhd.defaultSampleFlags = ByteParserUtils.parseUint32(data, offset);
         }
 
         return tfhd;

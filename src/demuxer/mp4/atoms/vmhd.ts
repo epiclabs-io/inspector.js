@@ -1,4 +1,4 @@
-import Mp4ParserUtils from '../mp4-parser-utils';
+import ByteParserUtils from '../../../utils/byte-parser-utils';
 import {Atom} from './atom';
 
 export class Vmhd extends Atom {
@@ -11,11 +11,11 @@ export class Vmhd extends Atom {
         const vmhd: Vmhd = new Vmhd(Atom.vmhd, data.byteLength);
         vmhd.version = data[0];
         vmhd.flags = data.subarray(1, 4);
-        vmhd.graphichsMode = Mp4ParserUtils.parseUint16(data, 4);
+        vmhd.graphichsMode = ByteParserUtils.parseUint16(data, 4);
         vmhd.opColor = new Uint16Array([
-            Mp4ParserUtils.parseUint16(data, 6),
-            Mp4ParserUtils.parseUint16(data, 8),
-            Mp4ParserUtils.parseUint16(data, 10)
+            ByteParserUtils.parseUint16(data, 6),
+            ByteParserUtils.parseUint16(data, 8),
+            ByteParserUtils.parseUint16(data, 10)
         ]);
         return vmhd;
     }

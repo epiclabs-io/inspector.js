@@ -1,4 +1,4 @@
-import Mp4ParserUtils from '../mp4-parser-utils';
+import ByteParserUtils from '../../../utils/byte-parser-utils';
 import {Atom} from './atom';
 
 export class DecoderConfigDescriptor {
@@ -27,14 +27,14 @@ export class Esds extends Atom {
 
         esds.version = data[0];
         esds.flags = data.subarray(1, 4);
-        esds.esId = Mp4ParserUtils.parseUint16(data, 6);
+        esds.esId = ByteParserUtils.parseUint16(data, 6);
         esds.streamPriority = data[8] & 0x1f;
         esds.decoderConfig = new DecoderConfig(
             data[11],
             (data[12] >>> 2) & 0x3f,
             (data[13] << 16) | (data[14] << 8) | data[15],
-            Mp4ParserUtils.parseUint32(data, 16),
-            Mp4ParserUtils.parseUint32(data, 20),
+            ByteParserUtils.parseUint32(data, 16),
+            ByteParserUtils.parseUint32(data, 20),
             new DecoderConfigDescriptor(
                 data[24],
                 data[25],

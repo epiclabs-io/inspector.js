@@ -1,4 +1,4 @@
-import Mp4ParserUtils from '../mp4-parser-utils';
+import ByteParserUtils from '../../../utils/byte-parser-utils';
 import {Atom} from './atom';
 
 export class Stsz extends Atom {
@@ -11,12 +11,12 @@ export class Stsz extends Atom {
         const stsz: Stsz = new Stsz(Atom.stsz, data.byteLength);
         stsz.version = data[0];
         stsz.flags = data.subarray(1, 4);
-        stsz.sampleSize = Mp4ParserUtils.parseUint32(data, 4);
+        stsz.sampleSize = ByteParserUtils.parseUint32(data, 4);
         stsz.entries = [];
 
         for (let i: number = 12; i < data.byteLength; i += 4) {
             stsz.entries.push(
-                Mp4ParserUtils.parseUint32(data, i));
+                ByteParserUtils.parseUint32(data, i));
         }
         return stsz;
     }

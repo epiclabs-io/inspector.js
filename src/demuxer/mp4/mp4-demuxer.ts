@@ -1,12 +1,11 @@
-import BitReader from '../../utils/bit-reader';
-import Mp4ParserUtils from './mp4-parser-utils';
+import ByteParserUtils from '../../utils/byte-parser-utils';
 import { boxesParsers } from './atoms';
 import { Atom, ContainerAtom } from './atoms/atom';
 import { Mp4Track } from './mp4-track';
 import { Tkhd } from './atoms/tkhd';
 
 export default class Mp4Demuxer {
-    public tracks: { [id: string]: Mp4Track; };
+    public tracks: { [id: string] : Mp4Track; };
 
     private data: Uint8Array;
     private lastPts: number;
@@ -29,8 +28,8 @@ export default class Mp4Demuxer {
         let dataOffset: number = offset;
 
         while (dataOffset < data.byteLength) {
-            const size: number = Mp4ParserUtils.parseUint32(data, dataOffset);
-            const type: string = Mp4ParserUtils.parseType(data, dataOffset + 4);
+            const size: number = ByteParserUtils.parseUint32(data, dataOffset);
+            const type: string = ByteParserUtils.parseIsoBoxType(data, dataOffset + 4);
             const end: number = size > 1 ? dataOffset + size : data.byteLength;
             const boxData: Uint8Array = data.subarray(dataOffset + 8, end);
 

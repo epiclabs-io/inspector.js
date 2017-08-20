@@ -1,4 +1,4 @@
-import Mp4ParserUtils from '../mp4-parser-utils';
+import ByteParserUtils from '../../../utils/byte-parser-utils';
 import {Atom} from './atom';
 
 export class SampleToChunkEntry {
@@ -17,13 +17,13 @@ export class Stsc extends Atom {
         stsc.version = data[0];
         stsc.flags = data.subarray(1, 4);
         stsc.sampleToChunks = [];
-        const entryCount: number = Mp4ParserUtils.parseUint32(data, 4);
+        const entryCount: number = ByteParserUtils.parseUint32(data, 4);
         let offset: number = 8;
         for (let i: number = 0; i < entryCount; i++) {
             stsc.sampleToChunks.push(new SampleToChunkEntry(
-                Mp4ParserUtils.parseUint32(data, offset),
-                Mp4ParserUtils.parseUint32(data, offset + 4),
-                Mp4ParserUtils.parseUint32(data, offset + 8)));
+                ByteParserUtils.parseUint32(data, offset),
+                ByteParserUtils.parseUint32(data, offset + 4),
+                ByteParserUtils.parseUint32(data, offset + 8)));
             offset += 12;
         }
         return stsc;

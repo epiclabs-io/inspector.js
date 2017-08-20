@@ -1,4 +1,4 @@
-import Mp4ParserUtils from '../mp4-parser-utils';
+import ByteParserUtils from '../../../utils/byte-parser-utils';
 import { Atom } from './atom';
 
 export class SampleFlags {
@@ -34,12 +34,12 @@ export class Trun extends Atom {
         const sampleFlagsPresent: boolean = !!(trun.flags[1] & 0x04);
         const sampleCompositionTimeOffsetPresent: boolean = !!(trun.flags[1] & 0x08);
 
-        let sampleCount: number = Mp4ParserUtils.parseUint32(data, 4);
+        let sampleCount: number = ByteParserUtils.parseUint32(data, 4);
         let offset: number = 8;
         trun.samples = [];
         let totalSize = 0;
         if (dataOffsetPresent) {
-            trun.dataOffset = Mp4ParserUtils.parseUint32(data, offset);
+            trun.dataOffset = ByteParserUtils.parseUint32(data, offset);
             offset += 4;
         }
         if (firstSampleFlagsPresent && sampleCount) {
@@ -47,16 +47,16 @@ export class Trun extends Atom {
             sample.flags = Trun.parseFlags(data.subarray(offset, offset + 4));
             offset += 4;
             if (sampleDurationPresent) {
-                sample.duration = Mp4ParserUtils.parseUint32(data, offset);
+                sample.duration = ByteParserUtils.parseUint32(data, offset);
                 offset += 4;
             }
             if (sampleSizePresent) {
-                sample.size = Mp4ParserUtils.parseUint32(data, offset);
+                sample.size = ByteParserUtils.parseUint32(data, offset);
                 totalSize += sample.size;
                 offset += 4;
             }
             if (sampleCompositionTimeOffsetPresent) {
-                sample.compositionTimeOffset = Mp4ParserUtils.parseUint32(data, offset);
+                sample.compositionTimeOffset = ByteParserUtils.parseUint32(data, offset);
                 offset += 4;
             }
             trun.samples.push(sample);
@@ -65,11 +65,11 @@ export class Trun extends Atom {
         while (sampleCount--) {
             const sample: Sample = new Sample();
             if (sampleDurationPresent) {
-                sample.duration = Mp4ParserUtils.parseUint32(data, offset);
+                sample.duration = ByteParserUtils.parseUint32(data, offset);
                 offset += 4;
             }
             if (sampleSizePresent) {
-                sample.size = Mp4ParserUtils.parseUint32(data, offset);
+                sample.size = ByteParserUtils.parseUint32(data, offset);
                 totalSize += sample.size;
                 offset += 4;
             }
@@ -78,7 +78,7 @@ export class Trun extends Atom {
                 offset += 4;
             }
             if (sampleCompositionTimeOffsetPresent) {
-                sample.compositionTimeOffset = Mp4ParserUtils.parseUint32(data, offset);
+                sample.compositionTimeOffset = ByteParserUtils.parseUint32(data, offset);
                 offset += 4;
             }
             trun.samples.push(sample);

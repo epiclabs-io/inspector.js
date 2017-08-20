@@ -1,4 +1,4 @@
-import Mp4ParserUtils from '../mp4-parser-utils';
+import ByteParserUtils from '../../../utils/byte-parser-utils';
 import {Atom, ContainerAtom} from './atom';
 import SPSParser from '../../../codecs/h264/sps-parser';
 import {Sps} from '../../../codecs/h264/nal-units';
@@ -29,7 +29,7 @@ export class AvcC extends Atom {
         avcC.spsParsed = [];
         let offset: number = 6;
         for (let i: number = 0; i < avcC.numOfSequenceParameterSets; i++) {
-            const spsSize: number = Mp4ParserUtils.parseUint16(data, offset);
+            const spsSize: number = ByteParserUtils.parseUint16(data, offset);
             offset += 2;
             const sps: Uint8Array = new Uint8Array(data.subarray(offset, offset + spsSize));
             avcC.sps.push(sps);
@@ -42,7 +42,7 @@ export class AvcC extends Atom {
         avcC.pps = [];
         offset++;
         for (let i: number = 0; i < avcC.numOfPictureParameterSets; i++) {
-            const ppsSize: number = Mp4ParserUtils.parseUint16(data, offset);
+            const ppsSize: number = ByteParserUtils.parseUint16(data, offset);
             offset += 2;
             avcC.pps.push(new Uint8Array(data.subarray(offset, offset + ppsSize)));
             offset += ppsSize;

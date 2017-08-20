@@ -1,4 +1,4 @@
-import Mp4ParserUtils from '../mp4-parser-utils';
+import ByteParserUtils from '../../../utils/byte-parser-utils';
 import {Atom} from './atom';
 
 export class Hdlr extends Atom {
@@ -11,7 +11,7 @@ export class Hdlr extends Atom {
         const hdlr: Hdlr = new Hdlr(Atom.hdlr, data.byteLength);
         hdlr.version = data[0];
         hdlr.flags = data.subarray(1, 4);
-        hdlr.handlerType = Mp4ParserUtils.parseType(data, 8);
+        hdlr.handlerType = ByteParserUtils.parseIsoBoxType(data, 8);
 
         // parse out the name field
         let name: string = '';

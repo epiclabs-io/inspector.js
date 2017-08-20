@@ -1,4 +1,4 @@
-import Mp4ParserUtils from '../mp4-parser-utils';
+import ByteParserUtils from '../../../utils/byte-parser-utils';
 import {Atom} from './atom';
 
 export class Emsg extends Atom {
@@ -18,17 +18,17 @@ export class Emsg extends Atom {
         emsg.flags = data.subarray(1, 4);
 
         let i: number = 4;
-        emsg.schemeIdUri = Mp4ParserUtils.parseNullTerminatedString(data, i, data.byteLength);
+        emsg.schemeIdUri = ByteParserUtils.parseNullTerminatedString(data, i, data.byteLength);
         i += emsg.schemeIdUri.length + 1;
-        emsg.value = Mp4ParserUtils.parseNullTerminatedString(data, i, data.byteLength);
+        emsg.value = ByteParserUtils.parseNullTerminatedString(data, i, data.byteLength);
         i += emsg.value.length + 1;
-        emsg.timescale = Mp4ParserUtils.parseUint32(data, i);
+        emsg.timescale = ByteParserUtils.parseUint32(data, i);
         i += 4;
-        emsg.presentationTimeDelta = Mp4ParserUtils.parseUint32(data, i);
+        emsg.presentationTimeDelta = ByteParserUtils.parseUint32(data, i);
         i += 4;
-        emsg.eventDuration = Mp4ParserUtils.parseUint32(data, i);
+        emsg.eventDuration = ByteParserUtils.parseUint32(data, i);
         i += 4;
-        emsg.id = Mp4ParserUtils.parseUint32(data, i);
+        emsg.id = ByteParserUtils.parseUint32(data, i);
         i += 4;
         if (i < data.byteLength - 1) {
             emsg.data = data.subarray(i);

@@ -1,4 +1,4 @@
-import Mp4ParserUtils from '../mp4-parser-utils';
+import ByteParserUtils from '../../../utils/byte-parser-utils';
 import {Atom, ContainerAtom} from './atom';
 
 export class Dref extends ContainerAtom {

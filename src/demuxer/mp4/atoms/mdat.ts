@@ -1,4 +1,4 @@
-import Mp4ParserUtils from '../mp4-parser-utils';
+import ByteParserUtils from '../../../utils/byte-parser-utils';
 import { Atom } from './atom';
 
 export class Mdat extends Atom {
@@ -12,7 +12,7 @@ export class Mdat extends Atom {
     private static parsePayload(data: Uint8Array): void {
         let length: number;
         for (let i: number = 0; i + 4 < data.byteLength; i += length) {
-            length = Mp4ParserUtils.parseUint32(data, i);
+            length = ByteParserUtils.parseUint32(data, i);
             i += 4;
 
             if (length <= 0) {

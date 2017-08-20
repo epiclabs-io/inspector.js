@@ -1,4 +1,4 @@
-import Mp4ParserUtils from '../mp4-parser-utils';
+import ByteParserUtils from '../../../utils/byte-parser-utils';
 import {Atom} from './atom';
 
 export class TimeToSampleEntry {
@@ -16,12 +16,12 @@ export class Stts extends Atom {
         stts.version = data[0];
         stts.flags = data.subarray(1, 4);
         stts.timeToSamples = [];
-        const entryCount: number = Mp4ParserUtils.parseUint32(data, 4);
+        const entryCount: number = ByteParserUtils.parseUint32(data, 4);
         let offset: number = 8;
         for (let i: number = 0; i < entryCount; i++) {
             stts.timeToSamples.push(new TimeToSampleEntry(
-                Mp4ParserUtils.parseUint32(data, offset),
-                Mp4ParserUtils.parseUint32(data, offset + 4)));
+                ByteParserUtils.parseUint32(data, offset),
+                ByteParserUtils.parseUint32(data, offset + 4)));
             offset += 8;
         }
         return stts;

@@ -1,4 +1,4 @@
-import Mp4ParserUtils from '../mp4-parser-utils';
+import ByteParserUtils from '../../../utils/byte-parser-utils';
 import {Atom, ContainerAtom} from './atom';
 
 export class Stsd extends ContainerAtom {
@@ -12,7 +12,7 @@ export class Stsd extends ContainerAtom {
 
         stsd.version = data[0];
         stsd.flags = data.subarray(1, 4);
-        stsd.entryCount = Mp4ParserUtils.parseUint32(data, 4);
+        stsd.entryCount = ByteParserUtils.parseUint32(data, 4);
 
         return stsd;
     }

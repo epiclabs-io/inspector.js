@@ -1,4 +1,4 @@
-import Mp4ParserUtils from '../mp4-parser-utils';
+import ByteParserUtils from '../../../utils/byte-parser-utils';
 import {Atom} from './atom';
 
 export class Tfdt extends Atom {
@@ -11,10 +11,10 @@ export class Tfdt extends Atom {
         tfdt.version = data[0];
         tfdt.flags = data.subarray(1, 4);
 
-        tfdt.baseMediaDecodeTime = Mp4ParserUtils.parseUint32(data, 4);
+        tfdt.baseMediaDecodeTime = ByteParserUtils.parseUint32(data, 4);
         if (tfdt.version === 1) {
             tfdt.baseMediaDecodeTime *= Math.pow(2, 32);
-            tfdt.baseMediaDecodeTime += Mp4ParserUtils.parseUint32(data, 8);
+            tfdt.baseMediaDecodeTime += ByteParserUtils.parseUint32(data, 8);
         }
 
         return tfdt;

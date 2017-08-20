@@ -8,17 +8,8 @@ export class Mp4SampleFlags {
     public degradationPriority: number;
 }
 
-export default class Mp4ParserUtils {
-    public static parseType(buffer: Uint8Array, offset: number): string {
-        let result: string = '';
-        result += String.fromCharCode(buffer[offset++]);
-        result += String.fromCharCode(buffer[offset++]);
-        result += String.fromCharCode(buffer[offset++]);
-        result += String.fromCharCode(buffer[offset]);
-        return result;
-    }
-
-    public static parseString(buffer: Uint8Array, offset: number, end: number): string {
+export default class ByteParserUtils {
+    public static parseStringWithLength(buffer: Uint8Array, offset: number, end: number): string {
         let result: string = '';
         const strLength: number = buffer[offset];
         const maxOffset: number = Math.min(offset + strLength + 1, end);
@@ -63,11 +54,20 @@ export default class Mp4ParserUtils {
             buffer[offset]) >>> 0;
     }
 
-    public static parseMp4Date(seconds: number): Date {
+    public static parseIsoBoxType(buffer: Uint8Array, offset: number): string {
+        let result: string = '';
+        result += String.fromCharCode(buffer[offset++]);
+        result += String.fromCharCode(buffer[offset++]);
+        result += String.fromCharCode(buffer[offset++]);
+        result += String.fromCharCode(buffer[offset]);
+        return result;
+    }
+
+    public static parseIsoBoxDate(seconds: number): Date {
         return new Date(seconds * 1000 - 2082844800000);
     }
 
-    public static parseSampleFlags(flags: number): Mp4SampleFlags {
+    public static parseIsoBoxSampleFlags(flags: number): Mp4SampleFlags {
         return {
             isLeading: (flags[0] & 0x0c) >>> 2,
             dependsOn: flags[0] & 0x03,

@@ -1,4 +1,4 @@
-import Mp4ParserUtils from '../mp4-parser-utils';
+import ByteParserUtils from '../../../utils/byte-parser-utils';
 import {Atom} from './atom';
 
 export class Stco extends Atom {
@@ -11,11 +11,11 @@ export class Stco extends Atom {
         stco.version = data[0];
         stco.flags = data.subarray(1, 4);
         stco.chunkOffsets = [];
-        const entryCount: number = Mp4ParserUtils.parseUint32(data, 4);
+        const entryCount: number = ByteParserUtils.parseUint32(data, 4);
         let offset: number = 8;
         for (let i: number = 0; i < entryCount; i++) {
             stco.chunkOffsets.push(
-                Mp4ParserUtils.parseUint32(data, offset));
+                ByteParserUtils.parseUint32(data, offset));
             offset += 4;
         }
         return stco;

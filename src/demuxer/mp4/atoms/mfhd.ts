@@ -1,4 +1,4 @@
-import Mp4ParserUtils from '../mp4-parser-utils';
+import ByteParserUtils from '../../../utils/byte-parser-utils';
 import {Atom} from './atom';
 
 export class Mfhd extends Atom {
@@ -10,7 +10,7 @@ export class Mfhd extends Atom {
         const mfhd: Mfhd = new Mfhd(Atom.mfhd, data.byteLength);
         mfhd.version = data[0];
         mfhd.flags = data.subarray(1, 4);
-        mfhd.sequenceNumber = Mp4ParserUtils.parseUint32(data, 4);
+        mfhd.sequenceNumber = ByteParserUtils.parseUint32(data, 4);
         return mfhd;
     }
 }

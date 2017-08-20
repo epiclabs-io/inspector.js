@@ -4,6 +4,7 @@ import UnknownReader from './payload/unknown-reader';
 import AdtsReader from './payload/adts-reader';
 import H264Reader from './payload/h264-reader';
 import ID3Reader from './payload/id3-reader';
+import MpegReader from './payload/mpeg-reader';
 
 export default class PESReader {
     public static TS_STREAM_TYPE_AAC: number = 0x0F;
@@ -30,19 +31,16 @@ export default class PESReader {
         } else if (type === PESReader.TS_STREAM_TYPE_ID3) {
             this.payloadReader = new ID3Reader();
         } else if (type === PESReader.TS_STREAM_TYPE_MPA || type === PESReader.TS_STREAM_TYPE_MPA_LSF) {
-        //   self.payloadReader = MpegReader();
+            this.payloadReader = new MpegReader();
         } else if (type === PESReader.TS_STREAM_TYPE_METADATA) {
-        //   self.payloadReader = MetadataReader();
+            // do nothing
         } else {
             this.payloadReader = new UnknownReader();
         }
     }
 
     public static ptsToTimeUs(pts: number): number {
-        if (pts > 4294967295) {
-            pts -= 8589934592;
-        }
-        return (pts * 1000000) / 90000;
+        return ((pts >>> 0) * 1000000) / 90000;
     }
 
     public appendData(payloadUnitStartIndicator: boolean, packet: BitReader): void {
