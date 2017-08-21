@@ -25,7 +25,7 @@ describe('Given an instance of MP4 demuxer', () => {
       expect(mp4Demux).to.be.an('object');
     });
     it('should respond to demux', () => {
-      expect(mp4Demux).to.respondTo('demux');
+      expect(mp4Demux).to.respondTo('append');
     });
   });
 });

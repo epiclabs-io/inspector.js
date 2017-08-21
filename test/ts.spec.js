@@ -25,7 +25,7 @@ describe('Given an instance of MpegTS demuxer', () => {
       expect(tsDemux).to.be.an('object');
     });
     it('should respond to demux', () => {
-      expect(tsDemux).to.respondTo('demux');
+      expect(tsDemux).to.respondTo('append');
     });
   });
 });
