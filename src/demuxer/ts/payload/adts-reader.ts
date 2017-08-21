@@ -12,13 +12,14 @@ export default class AdtsReader extends PayloadReader {
     private static STATE_READ_HEADER: number = 2;
     private static STATE_READ_FRAME: number = 3;
 
+    private static ADTS_SAMPLE_RATES: number[] = [96000, 88200, 64000, 48000,
+        44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
+
     public channels: number;
     public sampleRate: number;
     public frameDuration: number;
     public currentFrameSize: number;
 
-    private ADTS_SAMPLE_RATES: number[] = [96000, 88200, 64000, 48000,
-        44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
     private state: number;
 
     constructor () {
@@ -28,14 +29,11 @@ export default class AdtsReader extends PayloadReader {
         this.frameDuration = 0;
         this.currentFrameSize = 0;
         this.state = AdtsReader.STATE_FIND_SYNC;
+        this.dataOffset = 0;
     }
 
     public getMimeType(): string {
         return Track.MIME_TYPE_AAC;
-    }
-
-    public getFormat(): string {
-        return `Audio (AAC) - Sample Rate: ${this.sampleRate}, Channels: ${this.channels}`;
     }
 
     public consumeData(pts: number): void {
@@ -50,60 +48,59 @@ export default class AdtsReader extends PayloadReader {
             this.firstTimestamp = this.timeUs;
         }
 
-        let offset: number = 0;
-        while (offset < this.dataBuffer.byteLength) {
+        while (this.dataOffset < this.dataBuffer.byteLength) {
             if (this.state === AdtsReader.STATE_FIND_SYNC) {
-                offset = this.findNextSync(offset);
-                if (offset < this.dataBuffer.byteLength) {
-                    this.state = AdtsReader.STATE_READ_HEADER;
-                }
+                this.findNextSync();
             } else if (this.state === AdtsReader.STATE_READ_HEADER) {
-                if (this.dataBuffer.byteLength - offset < (AdtsReader.ADTS_HEADER_SIZE +
+                if (this.dataBuffer.byteLength - this.dataOffset < (AdtsReader.ADTS_HEADER_SIZE +
                     AdtsReader.ADTS_SYNC_SIZE)) {
                     break;
                 }
-                this.parseAACHeader(offset);
-                this.state = AdtsReader.STATE_READ_FRAME;
+                this.parseAACHeader();
             } else if (this.state === AdtsReader.STATE_READ_FRAME) {
-                if ((this.dataBuffer.byteLength - offset) < (AdtsReader.ADTS_SYNC_SIZE +
+                if ((this.dataBuffer.byteLength - this.dataOffset) < (AdtsReader.ADTS_SYNC_SIZE +
                     AdtsReader.ADTS_HEADER_SIZE + this.currentFrameSize)) {
                     break;
                 }
-                offset += (AdtsReader.ADTS_SYNC_SIZE + AdtsReader.ADTS_HEADER_SIZE +
+                this.frames.push(new Frame('I', this.timeUs));
+                this.timeUs = this.timeUs + this.frameDuration;
+
+                this.dataOffset += (AdtsReader.ADTS_SYNC_SIZE + AdtsReader.ADTS_HEADER_SIZE +
                     this.currentFrameSize);
                 this.state = AdtsReader.STATE_FIND_SYNC;
-
-                this.timeUs = this.timeUs + this.frameDuration;
-                this.frames.push(new Frame('I', this.timeUs));
             }
         }
 
-        this.dataBuffer = this.dataBuffer.subarray(offset);
+        this.dataBuffer = this.dataBuffer.subarray(this.dataOffset);
+        this.dataOffset = 0;
     }
 
-    private findNextSync(index: number): number {
+    private findNextSync(): void {
         const limit: number = this.dataBuffer.byteLength - 1;
-
-        for (let i: number = index; i < limit; i++) {
+        for (let i: number = this.dataOffset; i < limit; i++) {
             const dataRead: number = (((this.dataBuffer[i]) << 8) | (this.dataBuffer[i + 1]));
             if ((dataRead & 0xfff6) === 0xfff0) {
-                return i;
+                this.dataOffset = i;
+                if (this.dataOffset < this.dataBuffer.byteLength) {
+                    this.state = AdtsReader.STATE_READ_HEADER;
+                }
+                return;
             }
         }
 
-        return this.dataBuffer.byteLength;
+        this.dataOffset = this.dataBuffer.byteLength;
     }
 
-    private parseAACHeader(start: number): void {
-        const aacHeaderParser: BitReader = new BitReader(this.dataBuffer.subarray(start,
-            start + AdtsReader.ADTS_SYNC_SIZE + AdtsReader.ADTS_HEADER_SIZE));
+    private parseAACHeader(): void {
+        const aacHeaderParser: BitReader = new BitReader(this.dataBuffer.subarray(this.dataOffset,
+            this.dataOffset + AdtsReader.ADTS_SYNC_SIZE + AdtsReader.ADTS_HEADER_SIZE));
 
         aacHeaderParser.skipBits(15);
         const hasCrc: boolean = !aacHeaderParser.readBool();
         aacHeaderParser.skipBits(2);
         const sampleRateIndex: number = aacHeaderParser.readBits(4);
-        if (sampleRateIndex < this.ADTS_SAMPLE_RATES.length) {
-            this.sampleRate = this.ADTS_SAMPLE_RATES[sampleRateIndex];
+        if (sampleRateIndex < AdtsReader.ADTS_SAMPLE_RATES.length) {
+            this.sampleRate = AdtsReader.ADTS_SAMPLE_RATES[sampleRateIndex];
         } else {
             this.sampleRate = sampleRateIndex;
         }
@@ -120,5 +117,7 @@ export default class AdtsReader extends PayloadReader {
         if (hasCrc) {
             this.currentFrameSize -= AdtsReader.ADTS_CRC_SIZE;
         }
+
+        this.state = AdtsReader.STATE_READ_FRAME;
     }
 }

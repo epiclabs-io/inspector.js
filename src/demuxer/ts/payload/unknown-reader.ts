@@ -6,10 +6,6 @@ export default class UnknownReader extends PayloadReader {
         return 'unknown';
     }
 
-    public getFormat(): string {
-        return 'Unknown';
-    }
-
     public consumeData(pts: number): void {
         // do nothing
     }

@@ -37,7 +37,7 @@ export class Trun extends Atom {
         let sampleCount: number = ByteParserUtils.parseUint32(data, 4);
         let offset: number = 8;
         trun.samples = [];
-        let totalSize = 0;
+        let totalSize: number = 0;
         if (dataOffsetPresent) {
             trun.dataOffset = ByteParserUtils.parseUint32(data, offset);
             offset += 4;

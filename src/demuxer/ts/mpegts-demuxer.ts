@@ -2,6 +2,7 @@ import BitReader from '../../utils/bit-reader';
 import PESReader from './pes-reader';
 import TSTrack from './ts-track';
 import Track from '../track';
+import IDemuxer from '../demuxer';
 
 enum CONTAINER_TYPE {
     UNKNOWN = 1,
@@ -9,7 +10,7 @@ enum CONTAINER_TYPE {
     RAW_AAC,
 }
 
-export default class MpegTSDemuxer {
+export default class MpegTSDemuxer implements IDemuxer {
     private static MPEGTS_SYNC: number = 0x47;
     private static MPEGTS_PACKET_SIZE: number = 187;
 
@@ -17,14 +18,12 @@ export default class MpegTSDemuxer {
 
     private data: Uint8Array;
     private dataOffset: number;
-    private lastPts: number;
     private containerType: number;
     private pmtParsed: boolean;
     private packetsCount: number;
     private pmtId: number;
 
     constructor () {
-        this.lastPts = 0;
         this.containerType = CONTAINER_TYPE.UNKNOWN;
         this.pmtParsed = false;
         this.packetsCount = 0;
@@ -32,7 +31,7 @@ export default class MpegTSDemuxer {
         this.tracks = {};
     }
 
-    public demux(data: Uint8Array): void {
+    public append(data: Uint8Array): void {
         this.resetTracks();
         this.data = data;
         this.dataOffset = 0;
@@ -49,21 +48,18 @@ export default class MpegTSDemuxer {
         }
     }
 
-    public getTracksCount(): number {
-        return (this.tracks as any).keys.length;
-    }
-
-    public resetTracks(): void {
+    public end(): void {
         for (let id in this.tracks) {
             if (this.tracks.hasOwnProperty(id)) {
-                (this.tracks[0] as TSTrack).pes.reset();
+                (this.tracks[id] as TSTrack).pes.flush();
             }
         }
     }
-    public flush(): void {
+
+    private resetTracks(): void {
         for (let id in this.tracks) {
             if (this.tracks.hasOwnProperty(id)) {
-                (this.tracks[0] as TSTrack).pes.flush();
+                (this.tracks[id] as TSTrack).pes.reset();
             }
         }
     }
@@ -142,7 +138,6 @@ export default class MpegTSDemuxer {
                 packetParser.skipBytes(length);
             }
         }
-
         if (adaptationField === 1 || adaptationField === 3) {
             if (pid === 0) {
                 this.parseProgramId(payloadUnitStartIndicator, packetParser);

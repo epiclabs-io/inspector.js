@@ -42,14 +42,11 @@ export default class MpegReader extends PayloadReader {
         this.frameDuration = 0;
         this.mimeType = MpegReader.MIME_TYPE_BY_LAYER[2];
         this.state = MpegReader.STATE_FIND_SYNC;
+        this.dataOffset = 0;
     }
 
     public getMimeType(): string {
         return 'audio/' + this.mimeType;
-    }
-
-    public getFormat(): string {
-        return 'MPEG Audio (MP3)';
     }
 
     public consumeData(pts: number): void {
@@ -59,35 +56,32 @@ export default class MpegReader extends PayloadReader {
         if (pts >= 0) {
             this.timeUs = pts;
         }
-
         if (this.firstTimestamp === -1) {
             this.firstTimestamp = this.timeUs;
         }
-
-        let offset: number = 0;
-        while (offset < this.dataBuffer.byteLength) {
+        while (this.dataOffset < this.dataBuffer.byteLength) {
             if (this.state ===  MpegReader.STATE_FIND_SYNC) {
-                offset = this.findHeader(offset);
+                this.findHeader();
             } else if (this.state === MpegReader.STATE_READ_HEADER) {
-                if (!this.readHeader(offset)) {
+                if (!this.readHeader()) {
                     break;
                 }
             } else if (this.state === MpegReader.STATE_READ_FRAME) {
-                const len: number = this.readFrame(offset);
+                const len: number = this.readFrame();
                 if (len === 0) {
                     break;
                 }
-                offset += len;
+                this.dataOffset += len;
             }
         }
-        this.dataBuffer = this.dataBuffer.subarray(offset);
+        this.dataBuffer = this.dataBuffer.subarray(this.dataOffset);
+        this.dataOffset = 0;
     }
 
-    private findHeader(index: number): number {
+    private findHeader(): void {
         const limit: number = this.dataBuffer.byteLength - 1;
-
         let lastByteWasFF: boolean = false;
-        for (let i: number = 0; i < limit; i++) {
+        for (let i: number = this.dataOffset; i < limit; i++) {
             const isFF: boolean = ((this.dataBuffer[i]) & 0xFF) === 0XFF;
             const found: boolean = lastByteWasFF && ((this.dataBuffer[i] & 0xE0) === 0xE0);
             lastByteWasFF = isFF;
@@ -95,28 +89,32 @@ export default class MpegReader extends PayloadReader {
             if (found) {
                 lastByteWasFF = false;
                 this.state = MpegReader.STATE_READ_HEADER;
-                return i - 1;
+                this.dataOffset = i - 1;
+                return;
             }
         }
 
-        return this.dataBuffer.byteLength;
+        this.dataOffset = this.dataBuffer.byteLength;
     }
 
-    private readHeader(index: number): void {
-        if (this.dataBuffer.byteLength - index < MpegReader.HEADER_SIZE) {
-            return;
+    private readHeader(): boolean {
+        if (this.dataBuffer.byteLength - this.dataOffset < MpegReader.HEADER_SIZE) {
+            return false;
         }
 
-        const header: number = ByteParserUtils.parseUint32(this.dataBuffer, index);
+        const header: number = ByteParserUtils.parseUint32(this.dataBuffer, this.dataOffset);
         if (!this.parseHeader(header)) {
             this.state = MpegReader.STATE_FIND_SYNC;
+            this.dataOffset++;
         } else {
             this.state = MpegReader.STATE_READ_FRAME;
         }
+        return true;
     }
 
     private parseHeader(header: number): boolean {
         if ((header & 0xFFE00000) >>> 0 !== 0xFFE00000) {
+            console.log(header);
             return false;
         }
 
@@ -168,22 +166,18 @@ export default class MpegReader extends PayloadReader {
         }
         this.frameDuration = (1000000 * this.samplesPerFrame) / this.sampleRate;
 
-        console.log('Bitrate: ' + this.bitrate);
-        console.log('samplesPerFrame: ' + this.samplesPerFrame);
-        console.log('currentFrameSize: ' + this.currentFrameSize);
-        console.log('sampleRate: ' + this.sampleRate);
-        console.log('channels: ' + this.channels);
         return true;
     }
 
-    private readFrame(index: number): number {
-        if ((this.dataBuffer.byteLength - index) < (MpegReader.HEADER_SIZE + this.currentFrameSize)) {
+    private readFrame(): number {
+        if ((this.dataBuffer.byteLength - this.dataOffset) < (MpegReader.HEADER_SIZE + this.currentFrameSize)) {
+            console.log('not enought data');
             return 0;
         }
 
         this.state = MpegReader.STATE_FIND_SYNC;
-        this.timeUs = this.timeUs + this.frameDuration;
         this.frames.push(new Frame('I', this.timeUs));
+        this.timeUs = this.timeUs + this.frameDuration;
         return MpegReader.HEADER_SIZE + this.currentFrameSize;
     }
 }

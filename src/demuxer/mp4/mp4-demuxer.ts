@@ -4,23 +4,26 @@ import { Atom, ContainerAtom } from './atoms/atom';
 import Track from '../track';
 import Mp4Track from './mp4-track';
 import { Tkhd } from './atoms/tkhd';
+import IDemuxer from '../demuxer';
 
-export default class Mp4Demuxer {
+export default class Mp4Demuxer implements IDemuxer {
     public tracks: { [id: number] : Track; };
 
     private data: Uint8Array;
-    private lastPts: number;
     private atoms: Atom[];
     private lastTrackId: number;
 
     constructor() {
-        this.lastPts = 0;
         this.atoms = [];
         this.tracks = {};
     }
 
-    public demux(data: Uint8Array): void {
+    public append(data: Uint8Array): void {
         this.atoms = this.parseAtoms(data);
+    }
+
+    public end(): void {
+        // do nothing
     }
 
     private parseAtoms(data: Uint8Array, offset: number = 0): Atom[] {

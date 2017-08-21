@@ -18,9 +18,16 @@ export default class TSTrack extends Track {
     }
 
     public getMimeType(): string {
-        if (this.pes) {
-            return this.pes.getMimeType();
+        if (this.pes && this.pes.payloadReader) {
+            return this.pes.payloadReader.getMimeType();
         }
         return super.getMimeType();
+    }
+
+    public getDuration(): number {
+        if (this.pes && this.pes.payloadReader) {
+            return this.pes.payloadReader.getDuration();
+        }
+        return 0;
     }
 }

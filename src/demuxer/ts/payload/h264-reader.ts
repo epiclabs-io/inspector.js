@@ -35,17 +35,28 @@ export class Fraction {
 
 export default class H264Reader extends PayloadReader {
     public sps: Sps;
+    public pendingBytes: number;
 
     constructor() {
         super();
+        this.pendingBytes = 0;
     }
 
     public getMimeType(): string {
         return Track.MIME_TYPE_AVC;
     }
 
-    public getFormat(): string {
-        return `Video (H.264) - Profile: ${this.sps.profile}, Level: ${this.sps.level}, Resolution: ${this.sps.codecSize}, Encoded aspect ratio: ${this.sps.sar}, Display aspect ratio: ${this.sps.presentSize}`;
+    public flush(pts: number): void {
+        if (this.dataBuffer.byteLength > 0) {
+            this.consumeData(pts);
+
+            if (this.dataBuffer.byteLength > 0) {
+                const offset: number = this.findNextNALUnit(0);
+                if (offset < this.dataBuffer.byteLength) {
+                    this.processNALUnit(offset, this.dataBuffer.byteLength, this.dataBuffer[offset + 3] & 0x1F);
+                }
+            }
+        }
     }
 
     public consumeData(pts: number): void {
@@ -53,16 +64,29 @@ export default class H264Reader extends PayloadReader {
             return;
         }
         if (this.firstTimestamp === -1) {
-            this.firstTimestamp = pts;
+            this.timeUs = this.firstTimestamp = pts;
         }
 
+        // process any possible reminding data
+        let nextNalUnit: number = 0;
+        let offset: number = 0;
+        if (this.pendingBytes) {
+            nextNalUnit = this.findNextNALUnit(this.pendingBytes);
+            if (nextNalUnit < this.dataBuffer.byteLength) {
+                this.processNALUnit(0, nextNalUnit, this.dataBuffer[offset + 3] & 0x1F);
+                offset = nextNalUnit;
+            }
+            this.pendingBytes = 0;
+        } else {
+            offset = this.findNextNALUnit(0);
+        }
+
+        // process next nal units in the buffer
         if (pts !== -1) {
             this.timeUs = pts;
         }
 
         if (this.dataBuffer.byteLength > 0) {
-            let offset: number = this.findNextNALUnit(0);
-            let nextNalUnit: number = 0;
             while (nextNalUnit < this.dataBuffer.byteLength) {
                 nextNalUnit = this.findNextNALUnit(offset + 3);
                 if (nextNalUnit < this.dataBuffer.byteLength) {
@@ -70,8 +94,8 @@ export default class H264Reader extends PayloadReader {
                     offset = nextNalUnit;
                 }
             }
-
             this.dataBuffer = this.dataBuffer.subarray(offset);
+            this.pendingBytes = this.dataBuffer.byteLength;
         }
     }
 

@@ -14,11 +14,12 @@ export default class PESReader {
     public static TS_STREAM_TYPE_MPA_LSF: number = 0x04;
     public static TS_STREAM_TYPE_METADATA: number = 0x06;
 
+    public payloadReader: PayloadReader;
+
     private lastPts: number;
     private pesLength: number;
-    private payloadReader: PayloadReader;
 
-    constructor (public pid: number, public type: number ) {
+    constructor(public pid: number, public type: number) {
         this.pid = pid;
         this.type = type;
         this.lastPts = -1;
@@ -40,7 +41,7 @@ export default class PESReader {
     }
 
     public static ptsToTimeUs(pts: number): number {
-        return ((pts >>> 0) * 1000000) / 90000;
+        return (pts * 1000000) / 90000;
     }
 
     public appendData(payloadUnitStartIndicator: boolean, packet: BitReader): void {
@@ -58,22 +59,19 @@ export default class PESReader {
 
     public parsePESHeader(packet: BitReader): void {
         packet.skipBytes(7);
-        const timingFlags: number = (packet.readByte() & 0xc0) >> 6;
-
-        if (timingFlags === 0x02 || timingFlags === 0x03) {
-             packet.skipBits(4);
-             let pts: number = packet.readBits(3) << 30;
-             packet.skipBits(1);
-             pts |= packet.readBits(15) << 15;
-             packet.skipBits(1);
-             pts |= packet.readBits(15);
-             packet.skipBits(1);
-
-             this.lastPts = PESReader.ptsToTimeUs(pts);
-
-             if (timingFlags === 0x03) {
-                 packet.skipBytes(5);
-             }
+        const timingFlags: number = packet.readByte();
+        if (timingFlags & 0xC0) {
+            packet.skipBytes(1);
+            let pts: number;
+            pts = (packet.readByte() & 0x0E) << 27 |
+                (packet.readByte() & 0xFF) << 20 |
+                (packet.readByte() & 0xFE) << 12 |
+                (packet.readByte() & 0xFF) << 5;
+            const val: number = packet.readByte();
+            pts |= (val & 0xFE) >>> 3;
+            pts = pts << 2;
+            pts += (val & 0x06) >>> 1;
+            this.lastPts = PESReader.ptsToTimeUs(pts);
         }
     }
 
@@ -85,14 +83,7 @@ export default class PESReader {
 
     public flush(): void {
         if (this.payloadReader) {
-            this.payloadReader.flush();
+            this.payloadReader.flush(this.lastPts);
         }
-    }
-
-    public getMimeType(): string {
-        if (this.payloadReader) {
-            return this.payloadReader.getMimeType();
-        }
-        return '';
     }
 }

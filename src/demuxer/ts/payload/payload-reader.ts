@@ -7,6 +7,8 @@ export default class PayloadReader {
     public frames: Frame[] = [];
     public dataBuffer: Uint8Array;
 
+    protected dataOffset: number;
+
     public append(packet: BitReader): void {
         const dataToAppend: Uint8Array = packet.buffer.subarray(packet.bytesOffset());
         if (!this.dataBuffer) {
@@ -22,13 +24,15 @@ export default class PayloadReader {
 
     public reset(): void {
         this.frames = [];
+        this.dataOffset = 0;
     }
 
-    public flush(): void {
+    public flush(pts: number): void {
         if (this.dataBuffer.byteLength > 0) {
-            this.consumeData(-1);
+            this.consumeData(pts);
             this.dataBuffer = null;
         }
+        this.dataOffset = 0;
     }
 
     public consumeData(pts: number): void {
@@ -49,9 +53,5 @@ export default class PayloadReader {
 
     public getLastPTS(): number {
         return this.timeUs;
-    }
-
-    public getFormat(): string {
-        return '';
     }
 }

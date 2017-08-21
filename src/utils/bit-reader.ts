@@ -79,7 +79,6 @@ export default class BitReader {
         return this.readBits(8);
     };
 
-      // (size:int):uint
     public readBits(size: number): number {
         let bits: number = Math.min(this.workingBitsAvailable, size);
         const val: number = this.workingWord >>> (32 - bits);
