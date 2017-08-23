@@ -24,6 +24,7 @@ import {Trun} from './trun';
 import {Mfhd} from './mfhd';
 import {Mdat} from './mdat';
 import {Emsg} from './emsg';
+import {Styp} from './styp';
 
 export const boxesParsers: {[type: string] : (data: Uint8Array) => Atom} = {};
 
@@ -52,3 +53,4 @@ boxesParsers[Atom.trun] = Trun.parse;
 boxesParsers[Atom.mfhd] = Mfhd.parse;
 boxesParsers[Atom.mdat] = Mdat.parse;
 boxesParsers[Atom.emsg] = Emsg.parse;
+boxesParsers[Atom.styp] = Styp.parse;

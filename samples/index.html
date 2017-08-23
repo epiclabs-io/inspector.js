@@ -9,13 +9,6 @@
     <%= htmlWebpackPlugin.options.title %>
   </title>
   <meta name="description" content="<%= htmlWebpackPlugin.options.title %>">
-
-  <style>
-    .text_type_bold{
-      font-style:none;
-      font-weight:bold;
-    }
-  </style>
 </head>
 
 <body>
@@ -24,23 +17,37 @@
   </div>
 
   <div ng-controller="myCtrl">
-    <div class="row">
-      <div class="col-md-12">
-        <pre>{{tracks}}</pre>
+    <div class="row" ng-if="isMp4">
+      <div class="panel panel-default">
+        <div class="col-md-3">
+          <treecontrol class="tree-light" tree-model="mp4Atoms" options="treeOptions" on-selection="showSelected(node)">
+            {{node.type}} ({{node.size}} bytes)
+          </treecontrol>
+        </div>
+        <div class="col-md-9">
+          <ul>
+            <li ng-repeat="(key, value) in selectedNode" ng-if="key !== 'atoms' && key !== 'containerDataOffset'">
+              {{key}}: {{value}}
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
+
     <div class="row">
       <div class="col-md-9">
-        <ul>
-          <li ng-repeat="(key, value) in tracks">
-            Track #{{value.id}} - {{value.getMimeType()}}
-            <ul>
-              <li ng-repeat="frame in value.pes.payloadReader.frames">
-                <div ng-class="{text_type_bold: frame.frameType === 'I' }">{{frame.timeUs / 1000000 | number: 2}} s - {{frame.frameType}}</div>
-              </li>
-            </ul>
-          </li>
-        </ul>
+        <div class="panel panel-default">
+          <ul>
+            <li ng-repeat="(key, value) in tracks">
+              Track #{{value.id}} - {{value.getMimeType()}}
+              <ul>
+                <li ng-repeat="frame in value.getFrames()">
+                  <div ng-class="{text_type_bold: frame.frameType === 'I' }">{{frame.timeUs / 1000000 | number: 2}} s - {{frame.frameType}}</div>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>
@@ -48,52 +55,40 @@
   <video id="video"></video>
 
   <script>
-    let app = angular.module('myApp', []);
+    let app = angular.module('myApp', ['treeControl']);
     app.controller('myCtrl', function ($scope, $http) {
-      var oReq = new XMLHttpRequest();
+      $scope.treeOptions = {
+        nodeChildren: 'atoms'
+      };
+
+      $scope.showSelected = function (sel) {
+        $scope.selectedNode = sel;
+      };
+
+      var mediaSampleUrl = 'http://localhost/dash/chunk_video.m4s';
+      $scope.isMp4 = true;
+
       //var mediaSampleUrl = 'http://localhost/test/mp3_sample.ts';
-      var mediaSampleUrl = 'http://localhost/test/new0.ts';
+      //$scope.isMp4 = false;
+
+      var oReq = new XMLHttpRequest();
+      var demuxer = $scope.isMp4 ? inspectorjs.createMp4Demuxer() : inspectorjs.createMpegTSDemuxer();
       $http.get(mediaSampleUrl, {
         responseType: 'arraybuffer'
       }).then(function successCb(response) {
         let arrayBuffer = response.data; // Note: not oReq.responseText
         if (arrayBuffer) {
           var byteArray = new Uint8Array(arrayBuffer);
-          var demuxer = inspectorjs.createMpegTSDemuxer();
           demuxer.append(byteArray);
           demuxer.end();
+          if ($scope.isMp4) {
+            $scope.mp4Atoms = demuxer.atoms;
+          }
           $scope.tracks = demuxer.tracks;
         }
       }, function errorCb(response) {
         console.log('Error: ' + response);
       });
-
-      /*
-      if (Hls.isSupported()) {
-        var video = document.getElementById('video');
-        var hls = new Hls({
-          enableWorker: false
-        });
-        hls.loadSource('https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8');
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, function () {
-          video.play();
-        });
-        hls.on(Hls.Events.FRAG_LOADED, function (event, segment) {
-          if (segment && segment.payload.byteLength > 0) {
-            let arrayBuffer = segment.payload; // Note: not oReq.responseText
-            if (arrayBuffer) {
-              var byteArray = new Uint8Array(arrayBuffer);
-              //var demuxer = inspectorjs.createMpegTSDemuxer();
-              var demuxer = inspectorjs.createMpegTSDemuxer();
-              demuxer.demux(byteArray);
-              $scope.framesInfo = demuxer.tracks;
-              $scope.$apply();
-            }
-          }
-        });
-      }
-      */
     });
   </script>
 </body>

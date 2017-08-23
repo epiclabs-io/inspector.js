@@ -186,11 +186,11 @@ export default class H264Reader extends PayloadReader {
         }
         switch (sliceType) {
             case SLICE_TYPE.B:
-                return 'B';
+                return Frame.B_FRAME;
             case SLICE_TYPE.I:
-                return 'I';
+                return Frame.IDR_FRAME;
             case SLICE_TYPE.P:
-                return 'P';
+                return Frame.P_FRAME;
             case SLICE_TYPE.SI:
                 return 'SI';
             case SLICE_TYPE.SP:

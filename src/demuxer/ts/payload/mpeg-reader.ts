@@ -150,18 +150,18 @@ export default class MpegReader extends PayloadReader {
             this.bitrate = (version === 3) ? MpegReader.BITRATE_V1_L1[bitrateIndex - 1] :
                 MpegReader.BITRATE_V2_L1[bitrateIndex - 1];
             this.samplesPerFrame = 384;
-            this.currentFrameSize = (12000 * this.bitrate / this.sampleRate + padding) * 4;
+            this.currentFrameSize = Math.floor(this.samplesPerFrame * (this.bitrate * 1000 / 8) / this.sampleRate) + padding;
         } else {
             if (version === 3) {
                 this.bitrate = (layer === 2) ? MpegReader.BITRATE_V1_L2[bitrateIndex - 1] :
                     MpegReader.BITRATE_V1_L3[bitrateIndex - 1];
                 this.samplesPerFrame = 1152;
-                this.currentFrameSize = 144000 * this.bitrate / this.sampleRate + padding;
+                this.currentFrameSize = Math.floor(this.samplesPerFrame * (this.bitrate * 1000 / 8) / this.sampleRate) + padding;
             } else {
                 // Version 2 or 2.5.
                 this.bitrate = MpegReader.BITRATE_V2[bitrateIndex - 1];
                 this.samplesPerFrame = (layer === 1) ? 576 : 1152;
-                this.currentFrameSize = (layer === 1 ? 72000 : 144000) * this.bitrate / this.sampleRate + padding;
+                this.currentFrameSize = Math.floor(this.samplesPerFrame * (this.bitrate * 1000 / 8) / this.sampleRate) + padding;
             }
         }
         this.frameDuration = (1000000 * this.samplesPerFrame) / this.sampleRate;
@@ -171,12 +171,10 @@ export default class MpegReader extends PayloadReader {
 
     private readFrame(): number {
         if ((this.dataBuffer.byteLength - this.dataOffset) < (MpegReader.HEADER_SIZE + this.currentFrameSize)) {
-            console.log('not enought data');
             return 0;
         }
-
         this.state = MpegReader.STATE_FIND_SYNC;
-        this.frames.push(new Frame('I', this.timeUs));
+        this.frames.push(new Frame(Frame.IDR_FRAME, this.timeUs));
         this.timeUs = this.timeUs + this.frameDuration;
         return MpegReader.HEADER_SIZE + this.currentFrameSize;
     }

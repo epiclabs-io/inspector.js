@@ -5,6 +5,7 @@ import Track from '../track';
 import Mp4Track from './mp4-track';
 import { Tkhd } from './atoms/tkhd';
 import IDemuxer from '../demuxer';
+import Frame from '../frame';
 
 export default class Mp4Demuxer implements IDemuxer {
     public tracks: { [id: number] : Track; };
@@ -89,6 +90,24 @@ export default class Mp4Demuxer implements IDemuxer {
                         Track.TYPE_AUDIO, Track.MIME_TYPE_AAC, atom);
                 }
                 break;
+
+            case Atom.sidx:
+                this.checkTrack();
+                (this.tracks[this.lastTrackId] as Mp4Track).setSidxAtom(atom);
+                break;
+
+            case Atom.trun:
+                this.checkTrack();
+                (this.tracks[this.lastTrackId] as Mp4Track).setTrunAtom(atom);
+                break;
+        }
+    }
+
+    private checkTrack(): void {
+        if (this.lastTrackId === 0 || !this.tracks[this.lastTrackId]) {
+            this.lastTrackId = 1;
+            this.tracks[this.lastTrackId] = new Mp4Track(this.lastTrackId,
+                Track.TYPE_UNKNOWN, Track.MIME_TYPE_UNKNOWN, null);
         }
     }
 }

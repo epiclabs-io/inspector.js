@@ -1,5 +1,6 @@
 export class Atom {
     public static ftyp: string = 'ftyp';
+    public static styp: string = 'styp';
     public static avc1: string = 'avc1';
     public static avc3: string = 'avc3';
     public static hvc1: string = 'hvc1';
