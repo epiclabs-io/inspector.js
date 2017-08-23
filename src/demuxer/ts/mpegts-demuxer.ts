@@ -32,9 +32,17 @@ export default class MpegTSDemuxer implements IDemuxer {
     }
 
     public append(data: Uint8Array): void {
-        this.resetTracks();
-        this.data = data;
-        this.dataOffset = 0;
+        if (!this.data || this.data.byteLength === 0 || this.dataOffset >= this.data.byteLength) {
+            this.data = data;
+            this.dataOffset = 0;
+        } else {
+            const newLen: number = this.data.byteLength + data.byteLength;
+            const temp: Uint8Array = new Uint8Array(newLen);
+            temp.set(this.data, 0);
+            temp.set(data, this.data.byteLength);
+            this.data = temp;
+        }
+
         this.findContainerType();
 
         if (this.containerType === CONTAINER_TYPE.MPEG_TS) {
@@ -45,6 +53,11 @@ export default class MpegTSDemuxer implements IDemuxer {
             this.tracks[0] = new TSTrack(0, Track.TYPE_AUDIO, Track.MIME_TYPE_AAC,
                 new PESReader(0, PESReader.TS_STREAM_TYPE_AAC));
             (this.tracks[0] as TSTrack).pes.appendData(false, dataParser);
+        }
+
+        if (this.dataOffset > 0) {
+            this.data = this.data.subarray(this.dataOffset);
+            this.dataOffset = 0;
         }
     }
 

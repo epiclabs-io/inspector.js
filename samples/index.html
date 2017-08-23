@@ -13,7 +13,7 @@
 
 <body>
   <div class="player">
-
+    <video id="video"></video>
   </div>
 
   <div ng-controller="myCtrl">
@@ -52,8 +52,6 @@
     </div>
   </div>
 
-  <video id="video"></video>
-
   <script>
     let app = angular.module('myApp', ['treeControl']);
     app.controller('myCtrl', function ($scope, $http) {
@@ -65,14 +63,16 @@
         $scope.selectedNode = sel;
       };
 
-      var mediaSampleUrl = 'http://localhost/dash/chunk_video.m4s';
-      $scope.isMp4 = true;
+      //var mediaSampleUrl = 'http://localhost/dash/chunk_video.m4s';
+      //$scope.isMp4 = true;
 
-      //var mediaSampleUrl = 'http://localhost/test/mp3_sample.ts';
-      //$scope.isMp4 = false;
+      var mediaSampleUrl = 'http://localhost/test/mp3_sample.ts';
+      $scope.isMp4 = false;
 
       var oReq = new XMLHttpRequest();
       var demuxer = $scope.isMp4 ? inspectorjs.createMp4Demuxer() : inspectorjs.createMpegTSDemuxer();
+
+
       $http.get(mediaSampleUrl, {
         responseType: 'arraybuffer'
       }).then(function successCb(response) {
@@ -89,6 +89,37 @@
       }, function errorCb(response) {
         console.log('Error: ' + response);
       });
+
+      /*
+      var parsedSegments = 0;
+      if (!$scope.isMp4 && Hls.isSupported()) {
+        var video = document.getElementById('video');
+        var hls = new Hls({
+          enableWorker: false
+        });
+        hls.loadSource('http://multiplatform-f.akamaihd.net/i/multi/april11/hdworld/hdworld_,512x288_450_b,640x360_700_b,768x432_1000_b,1024x576_1400_m,.mp4.csmil/master.m3u8');
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, function () {
+          video.play();
+        });
+        hls.on(Hls.Events.FRAG_LOADED, function (event, segment) {
+          if (segment && segment.payload.byteLength > 0) {
+            let arrayBuffer = segment.payload; // Note: not oReq.responseText
+            if (arrayBuffer) {
+              parsedSegments++;
+              if (parsedSegments >= 3) {
+                demuxer.end();
+                demuxer.resetTracks();
+              }
+              var byteArray = new Uint8Array(arrayBuffer);
+              demuxer.append(byteArray);
+              $scope.tracks = demuxer.tracks;
+              $scope.$apply();
+            }
+          }
+        });
+      }
+      */
     });
   </script>
 </body>

@@ -28,8 +28,12 @@ export default class Mp4Track extends Track {
      public setTrunAtom(atom: Atom): void {
          this.trun = atom as Trun;
          for ( const sample of this.trun.samples) {
-            this.frames.push(new Frame(sample.flags.isSyncFrame ? Frame.IDR_FRAME : Frame.P_FRAME, this.lastPts));
-            this.lastPts += sample.duration;
+            if (sample.flags) {
+                this.frames.push(new Frame(sample.flags.isSyncFrame ? Frame.IDR_FRAME : Frame.P_FRAME, this.lastPts));
+            }
+            if (sample.duration) {
+                this.lastPts += sample.duration;
+            }
          }
      }
 }
