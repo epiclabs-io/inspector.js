@@ -27,6 +27,8 @@ import {Emsg} from './emsg';
 import {Styp} from './styp';
 import {Pssh} from './pssh';
 import {HvcC} from './hvcC';
+import {Hvc1} from './hvc1';
+import {Hev1} from './hev1';
 
 export const boxesParsers: {[type: string] : (data: Uint8Array) => Atom} = {};
 
@@ -58,3 +60,5 @@ boxesParsers[Atom.emsg] = Emsg.parse;
 boxesParsers[Atom.styp] = Styp.parse;
 boxesParsers[Atom.pssh] = Pssh.parse;
 boxesParsers[Atom.hvcC] = HvcC.parse;
+boxesParsers[Atom.hvc1] = Hvc1.parse;
+boxesParsers[Atom.hev1] = Hev1.parse;
