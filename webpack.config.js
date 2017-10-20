@@ -73,11 +73,6 @@ const config = {
                     ],
                     supplements: ['fonts/', 'images/'],
                 },
-                {
-                    module: 'hls.js',
-                    entry: 'dist/hls.min.js',
-                    global: 'Hls'
-                },
             ],
         })
     ],
