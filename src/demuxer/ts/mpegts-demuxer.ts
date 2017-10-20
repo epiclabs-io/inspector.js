@@ -146,7 +146,7 @@ export default class MpegTSDemuxer implements IDemuxer {
         const pid: number = packetParser.readBits(13);
         const adaptationField: number = (packetParser.readByte() & 0x30) >> 4;
         if (adaptationField > 1) {
-            length = packetParser.readByte();
+            const length: number = packetParser.readByte();
             if (length > 0) {
                 packetParser.skipBytes(length);
             }
