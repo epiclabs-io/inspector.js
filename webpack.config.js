@@ -5,7 +5,7 @@ const HtmlWebpackExternalsPlugin = require('html-webpack-externals-plugin')
 
 const PATHS = {
     entryPoint: path.resolve(__dirname, 'src/index.ts'),
-    bundles: path.resolve(__dirname, 'dist'),
+    bundles: path.resolve(__dirname, 'lib'),
 }
 
 const config = {
@@ -90,7 +90,7 @@ const config = {
                 // we don't want any declaration file in the bundles
                 // folder since it wouldn't be of any use ans the source
                 // map already include everything for debugging
-                declaration: false,
+                declaration: true,
             }
         }, {
             test: /\.scss$/,
