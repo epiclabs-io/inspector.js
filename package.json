@@ -7,7 +7,6 @@
     "url" : "https://github.com/epiclabs-io/inspector.js"
   },
   "main": "./lib/inspector-lib.min.js",
-  "types": "./lib/index.d.ts",
   "scripts": {
     "start": "npm run server:dev",
     "server:dev": "webpack-dashboard -- webpack-dev-server",
