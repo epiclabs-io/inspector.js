@@ -100,7 +100,7 @@ export default class BitReader {
     private loadWord(): void {
         const position: number = this.buffer.byteLength - this.workingBytesAvailable;
         const workingBytes: Uint8Array = new Uint8Array(4);
-        const availableBytes: number = Math.min(4, this.workingBytesAvailable);
+        const availableBytes: number = Math.min(4, this.remainingBytes());
 
         if (availableBytes === 0) {
             throw new Error('No bytes available');

@@ -2,6 +2,7 @@ import BitReader from '../../utils/bit-reader';
 import PESReader from './pes-reader';
 import TSTrack from './ts-track';
 import Track from '../track';
+import ITrackInfo from '../track-info';
 import IDemuxer from '../demuxer';
 
 enum CONTAINER_TYPE {
@@ -31,7 +32,7 @@ export default class MpegTSDemuxer implements IDemuxer {
         this.tracks = {};
     }
 
-    public append(data: Uint8Array): void {
+    public append(data: Uint8Array): ITrackInfo[] {
         if (!this.data || this.data.byteLength === 0 || this.dataOffset >= this.data.byteLength) {
             this.data = data;
             this.dataOffset = 0;
@@ -59,6 +60,25 @@ export default class MpegTSDemuxer implements IDemuxer {
             this.data = this.data.subarray(this.dataOffset);
             this.dataOffset = 0;
         }
+        return this.getTracksInfo();
+    }
+
+    public getTracksInfo(): ITrackInfo[] {
+        const trackInfos: ITrackInfo[] = [];
+        for (var trackId in this.tracks) {
+            if (this.tracks.hasOwnProperty(trackId)) {
+                const track: Track = this.tracks[trackId];
+                track.update();
+                trackInfos.push({
+                    id: track.id,
+                    mimeType: track.mimeType,
+                    type: track.type,
+                    frames: track.frames,
+                    duration: track.duration,
+                });
+            }
+        }
+        return trackInfos;
     }
 
     public end(): void {
@@ -146,7 +166,7 @@ export default class MpegTSDemuxer implements IDemuxer {
         const pid: number = packetParser.readBits(13);
         const adaptationField: number = (packetParser.readByte() & 0x30) >> 4;
         if (adaptationField > 1) {
-            length = packetParser.readByte();
+            const length: number = packetParser.readByte();
             if (length > 0) {
                 packetParser.skipBytes(length);
             }
@@ -195,7 +215,27 @@ export default class MpegTSDemuxer implements IDemuxer {
             bytesRemaining -= infoLength + 5;
             if (!this.tracks[elementaryPid]) {
                 const pes: PESReader = new PESReader(elementaryPid, streamType);
-                this.tracks[elementaryPid] = new TSTrack(elementaryPid, '', '', pes);
+                let type: string;
+                let mimeType: string;
+                if (streamType === PESReader.TS_STREAM_TYPE_AAC) {
+                    type = Track.TYPE_AUDIO;
+                    mimeType = Track.MIME_TYPE_AAC;
+                } else if (streamType === PESReader.TS_STREAM_TYPE_H264) {
+                    type = Track.TYPE_VIDEO;
+                    mimeType = Track.MIME_TYPE_AVC;
+                } else if (streamType === PESReader.TS_STREAM_TYPE_ID3) {
+                    type = Track.TYPE_TEXT;
+                    mimeType = Track.MIME_TYPE_ID3;
+                } else if (streamType === PESReader.TS_STREAM_TYPE_MPA || streamType === PESReader.TS_STREAM_TYPE_MPA_LSF) {
+                    type = Track.TYPE_AUDIO;
+                    mimeType = Track.MIME_TYPE_MPEG;
+                } else if (streamType === PESReader.TS_STREAM_TYPE_METADATA) {
+                    // do nothing
+                } else {
+                    type = Track.TYPE_UNKNOWN;
+                    mimeType = Track.MIME_TYPE_UNKNOWN;
+                }
+                this.tracks[elementaryPid] = new TSTrack(elementaryPid, type, mimeType, pes);
             }
         }
         this.pmtParsed = true;

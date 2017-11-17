@@ -30,7 +30,6 @@
     "chai": "^4.1.1",
     "css-loader": "^0.28.4",
     "extract-text-webpack-plugin": "^2.1.2",
-    "hls.js": "^0.7.11",
     "html-webpack-externals-plugin": "^3.4.0",
     "html-webpack-plugin": "^2.29.0",
     "mocha": "^3.5.0",
@@ -43,7 +42,7 @@
     "webpack": "^2.4.1",
     "webpack-build-notifier": "^0.1.14",
     "webpack-dashboard": "^0.3.0",
-    "webpack-dev-server": "^2.4.2"
+    "webpack-dev-server": "2.7.1"
   },
   "dependencies": {}
 }

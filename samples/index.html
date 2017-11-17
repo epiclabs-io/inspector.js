@@ -39,7 +39,7 @@
         <div class="panel panel-default">
           <ul>
             <li ng-repeat="(key, value) in tracks">
-              Track #{{value.id}} - {{value.getMimeType()}}
+              Track #{{value.id}} - {{value.mimeType}}
               <ul>
                 <li ng-repeat="frame in value.getFrames()">
                   <div ng-class="{text_type_bold: frame.frameType === 'I' }">{{frame.timeUs / 1000000 | number: 2}} s - {{frame.frameType}}</div>
@@ -54,7 +54,7 @@
 
   <script>
     let app = angular.module('myApp', ['treeControl']);
-    app.controller('myCtrl', function ($scope, $http) {
+    app.controller('myCtrl', function ($scope, $http, $q) {
       $scope.treeOptions = {
         nodeChildren: 'atoms'
       };
@@ -73,22 +73,32 @@
       var demuxer = $scope.isMp4 ? inspectorjs.createMp4Demuxer() : inspectorjs.createMpegTSDemuxer();
 
 
-      $http.get(mediaSampleUrl, {
+      var r1 = $http.get(mediaSampleUrl1, {
         responseType: 'arraybuffer'
-      }).then(function successCb(response) {
-        let arrayBuffer = response.data; // Note: not oReq.responseText
-        if (arrayBuffer) {
-          var byteArray = new Uint8Array(arrayBuffer);
-          demuxer.append(byteArray);
+      });
+      var r2 = $http.get(mediaSampleUrl2, {
+        responseType: 'arraybuffer'
+      });
+      $q.all([r1, r2])
+        .then(function successCb(resolve) {
+          let arrayBuffer1 = resolve[0].data; // Note: not oReq.responseText
+          if (arrayBuffer1) {
+            var byteArray = new Uint8Array(arrayBuffer1);
+            demuxer.append(byteArray);
+          }
+          let arrayBuffer2 = resolve[1].data; // Note: not oReq.responseText
+          if (arrayBuffer2) {
+            var byteArray = new Uint8Array(arrayBuffer2);
+            demuxer.append(byteArray);
+          }
           demuxer.end();
           if ($scope.isMp4) {
             $scope.mp4Atoms = demuxer.atoms;
           }
           $scope.tracks = demuxer.tracks;
-        }
-      }, function errorCb(response) {
-        console.log('Error: ' + response);
-      });
+        }, function errorCb(response) {
+          console.log('Error: ' + response);
+        });
 
       /*
       var parsedSegments = 0;
