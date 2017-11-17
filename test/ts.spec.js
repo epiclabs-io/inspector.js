@@ -1,7 +1,7 @@
 /* global describe, it, before */
 
 import chai from 'chai';
-import * as inspectorjs from '../dist/inspectorjs-lib.js';
+import * as inspectorjs from '../lib/inspectorjs-lib.js';
 
 chai.expect();
 
