@@ -1,7 +1,7 @@
 {
-  "name": "epic-player",
-  "version": "0.0.1",
-  "description": "",
+  "name": "inspector.js",
+  "version": "0.0.2",
+  "description": "Javascript Library that implements MpegTS and MP4 demuxers.",
   "main": "index.ts",
   "scripts": {
     "start": "npm run server:dev",
