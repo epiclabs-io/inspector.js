@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html ng-app="myApp">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>
+    Webpack App
+  </title>
+  <meta name="description" content="Webpack App">
+<link href="../samples/vendors/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet"><link href="../samples/vendors/angular-tree-control/css/tree-control.css" rel="stylesheet"><link href="../samples/vendors/angular-tree-control/css/tree-control-attribute.css" rel="stylesheet"><script type="text/javascript" src="../samples/vendors/angular/angular.min.js"></script><script type="text/javascript" src="../samples/vendors/angular-tree-control/angular-tree-control.js"></script><script type="text/javascript" src="../inspectorjs-lib.js"></script><script type="text/javascript" src="../inspectorjs-lib.min.js"></script></head>
+
+<body>
+  <div class="player">
+    <video id="video"></video>
+  </div>
+
+  <div ng-controller="myCtrl">
+    <div class="row" ng-if="isMp4">
+      <div class="panel panel-default">
+        <div class="col-md-3">
+          <treecontrol class="tree-light" tree-model="mp4Atoms" options="treeOptions" on-selection="showSelected(node)">
+            {{node.type}} ({{node.size}} bytes)
+          </treecontrol>
+        </div>
+        <div class="col-md-9">
+          <ul>
+            <li ng-repeat="(key, value) in selectedNode" ng-if="key !== 'atoms' && key !== 'containerDataOffset'">
+              {{key}}: {{value}}
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-9">
+        <div class="panel panel-default">
+          <ul>
+            <li ng-repeat="(key, value) in tracks">
+              Track #{{value.id}} - {{value.mimeType}}
+              <ul>
+                <li ng-repeat="frame in value.getFrames()">
+                  <div ng-class="{text_type_bold: frame.frameType === 'I' }">{{frame.timeUs / 1000000 | number: 2}} s - {{frame.frameType}}</div>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let app = angular.module('myApp', ['treeControl']);
+    app.controller('myCtrl', function ($scope, $http, $q) {
+      $scope.treeOptions = {
+        nodeChildren: 'atoms'
+      };
+
+      $scope.showSelected = function (sel) {
+        $scope.selectedNode = sel;
+      };
+
+      var mediaSampleUrl = 'https://pss1.smartfun.cz/stream/50e22a7a-6697-4bf3-a0e2-d17d58c546fb/4/init.mp4';
+      $scope.isMp4 = true;
+
+      //var mediaSampleUrl = 'http://localhost/test/mp3_sample.ts';
+      //$scope.isMp4 = false;
+
+      var oReq = new XMLHttpRequest();
+      var demuxer = $scope.isMp4 ? inspectorjs.createMp4Demuxer() : inspectorjs.createMpegTSDemuxer();
+
+
+      var r1 = $http.get(mediaSampleUrl1, {
+        responseType: 'arraybuffer'
+      });
+      var r2 = $http.get(mediaSampleUrl2, {
+        responseType: 'arraybuffer'
+      });
+      $q.all([r1, r2])
+        .then(function successCb(resolve) {
+          let arrayBuffer1 = resolve[0].data; // Note: not oReq.responseText
+          if (arrayBuffer1) {
+            var byteArray = new Uint8Array(arrayBuffer1);
+            demuxer.append(byteArray);
+          }
+          let arrayBuffer2 = resolve[1].data; // Note: not oReq.responseText
+          if (arrayBuffer2) {
+            var byteArray = new Uint8Array(arrayBuffer2);
+            demuxer.append(byteArray);
+          }
+          demuxer.end();
+          if ($scope.isMp4) {
+            $scope.mp4Atoms = demuxer.atoms;
+          }
+          $scope.tracks = demuxer.tracks;
+        }, function errorCb(response) {
+          console.log('Error: ' + response);
+        });
+
+      /*
+      var parsedSegments = 0;
+      if (!$scope.isMp4 && Hls.isSupported()) {
+        var video = document.getElementById('video');
+        var hls = new Hls({
+          enableWorker: false
+        });
+        hls.loadSource('http://multiplatform-f.akamaihd.net/i/multi/april11/hdworld/hdworld_,512x288_450_b,640x360_700_b,768x432_1000_b,1024x576_1400_m,.mp4.csmil/master.m3u8');
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, function () {
+          video.play();
+        });
+        hls.on(Hls.Events.FRAG_LOADED, function (event, segment) {
+          if (segment && segment.payload.byteLength > 0) {
+            let arrayBuffer = segment.payload; // Note: not oReq.responseText
+            if (arrayBuffer) {
+              parsedSegments++;
+              if (parsedSegments >= 3) {
+                demuxer.end();
+                demuxer.resetTracks();
+              }
+              var byteArray = new Uint8Array(arrayBuffer);
+              demuxer.append(byteArray);
+              $scope.tracks = demuxer.tracks;
+              $scope.$apply();
+            }
+          }
+        });
+      }
+      */
+    });
+  </script>
+</body>
+
+</html>
