@@ -66,13 +66,14 @@
       var mediaSamplesUrl = ['https://pss1.smartfun.cz/stream/50e22a7a-6697-4bf3-a0e2-d17d58c546fb/4/init.mp4'];
       $scope.isMp4 = true;
 
-      // var mediaSamplesUrl = ['http://localhost:3000/fileSequence0.ts' , 'http://localhost:3000/fileSequence1.ts'];
-      // $scope.isMp4 = false;
+      //var mediaSamplesUrl = [
+      //  'http://multiplatform-f.akamaihd.net/i/multi/will/bunny/big_buck_bunny_,640x360_400,640x360_700,640x360_1000,950x540_1500,.f4v.csmil/segment20_0_av.ts' , 
+      //  'http://multiplatform-f.akamaihd.net/i/multi/will/bunny/big_buck_bunny_,640x360_400,640x360_700,640x360_1000,950x540_1500,.f4v.csmil/segment23_0_av.ts'
+      //];
+      //$scope.isMp4 = false;
 
       var oReq = new XMLHttpRequest();
-      var demuxer = $scope.isMp4 ? inspectorjs.createMp4Demuxer() : inspectorjs.createMpegTSDemuxer();
-
-
+      
       var requests = [];
       for (var mediaSampleUrl of mediaSamplesUrl) {
         requests.push($http.get(mediaSampleUrl, {
@@ -81,18 +82,61 @@
       }
       $q.all(requests)
         .then(function successCb(resolve) {
-          for (let r of resolve) {
-            let arrayBuffer = r.data;
-            if (arrayBuffer) {
-              var byteArray = new Uint8Array(arrayBuffer);
-              demuxer.append(byteArray);
+
+          if (Worker) {
+            var worker = new Worker("inspectorjs-lib.min.js");
+
+            const workerFunc = (worker, action) => {
+              var defered = $q.defer();
+              var promise = defered.promise;
+
+              worker.onmessage = ((event) => {
+                defered.resolve(event.data);
+              });
+              worker.postMessage(action);
+
+              return promise;
+            };
+
+            const executeAppend = (resolve, res) => {
+              if (resolve[0]) {
+                let arrayBuffer = resolve[0].data;
+                if (arrayBuffer) {
+                  var byteArray = new Uint8Array(arrayBuffer);
+                  workerFunc(worker, { type: 'EXECUTE_JOB_APPEND', job: res.job, data: byteArray }).then((res) => {
+                    resolve.splice(0, 1);
+                    executeAppend(resolve, res);
+                  });
+                }
+              } else {
+                workerFunc(worker, { type: 'END_JOB', job: res.job }).then((res) => {
+                  if ($scope.isMp4) {
+                    $scope.mp4Atoms = res.data.atoms;
+                  }
+                  $scope.tracks = res.data.tracks;
+                });
+              }
             }
+
+            workerFunc(worker, { type: $scope.isMp4 ? 'CREATE_MP4_DEMUX_JOB' : 'CREATE_MPEGTS_DEMUX_JOB' }).then((res) => {
+              executeAppend(resolve, res);
+            });
+
+          } else {
+            var demuxer = $scope.isMp4 ? inspectorjs.createMp4Demuxer() : inspectorjs.createMpegTSDemuxer();
+            for (let r of resolve) {
+              let arrayBuffer = r.data;
+              if (arrayBuffer) {
+                var byteArray = new Uint8Array(arrayBuffer);
+                demuxer.append(byteArray);
+              }
+            }
+            demuxer.end();
+            if ($scope.isMp4) {
+              $scope.mp4Atoms = demuxer.atoms;
+            }
+            $scope.tracks = demuxer.tracks;
           }
-          demuxer.end();
-          if ($scope.isMp4) {
-            $scope.mp4Atoms = demuxer.atoms;
-          }
-          $scope.tracks = demuxer.tracks;
         }, function errorCb(response) {
           console.log('Error: ' + response);
         });
