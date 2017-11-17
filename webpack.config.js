@@ -35,7 +35,8 @@ const config = {
     },
     // Activate source maps for the bundles in order to preserve the original
     // source when the user debugs the application
-    devtool: 'source-map',
+    // devtool: 'source-map',
+    devtool: 'eval', // https://github.com/webpack/webpack/issues/1487#issuecomment-209299242
     plugins: [
         // Apply minification only on the second bundle by
         // using a RegEx on the name, which must end with `.min.js`

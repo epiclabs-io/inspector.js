@@ -15,18 +15,23 @@ export default class Track {
     public static MIME_TYPE_ID3: string = 'application/id3';
     public static MIME_TYPE_UNKNOWN: string = 'unknown';
 
-    constructor(public id: number, private type: string, private mimeType: string) {
-    }
+    public frames: Frame[];
+    public duration: number;
 
-    public getType(): string {
-        return this.type;
-    }
-
-    public getMimeType(): string {
-        return this.mimeType;
+    constructor(public id: number, public type: string, public mimeType: string) {
+        this.frames = [];
     }
 
     public getFrames(): Frame[] {
         return [];
+    }
+
+    public getDuration(): number {
+        return this.duration;
+    }
+
+    public update(): void {
+        this.frames = this.getFrames();
+        this.duration = this.getDuration();
     }
 }
