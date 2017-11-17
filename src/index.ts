@@ -28,4 +28,10 @@ export interface InspectorAction {
     data: any;
 }
 
-onmessage = WebWorker.onMessage;
+try {
+    if (typeof window === 'undefined') {
+        onmessage = WebWorker.onMessage;
+    }
+} catch (e) {
+    // do nothing
+}
