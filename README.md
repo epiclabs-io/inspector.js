@@ -16,22 +16,22 @@ The easiest way to start using inspector.js in your own projects is installing i
 
 Once done, and integrated with your web app, you can start using it. Example:
 ```javascript
-    var mediaSamplesUrl = 'https://video-dev.github.io/streams/x36xhzz/url_0/url_462/193039199_mp4_h264_aac_hd_7.ts';
-    var req = new XMLHttpRequest();
-    req.open('GET', mediaSamplesUrl, true);
-    req.responseType = 'arraybuffer';
+var mediaSamplesUrl = 'https://video-dev.github.io/streams/x36xhzz/url_0/url_462/193039199_mp4_h264_aac_hd_7.ts';
+var req = new XMLHttpRequest();
+req.open('GET', mediaSamplesUrl, true);
+req.responseType = 'arraybuffer';
 
-    req.onload = function (data) {
-    var arrayBuffer = req.response;
-    if (arrayBuffer) {
-        var byteArray = new Uint8Array(arrayBuffer);
-        var demuxer = inspectorjs.createMpegTSDemuxer();
-        demuxer.append(byteArray);
-        demuxer.end();
+req.onload = function (data) {
+var arrayBuffer = req.response;
+if (arrayBuffer) {
+    var byteArray = new Uint8Array(arrayBuffer);
+    var demuxer = inspectorjs.createMpegTSDemuxer();
+    demuxer.append(byteArray);
+    demuxer.end();
 
-        // You will find tracks information in demuxer.tracks
-        console.log(demuxer.tracks);
-    }
+    // You will find tracks information in demuxer.tracks
+    console.log(demuxer.tracks);
+}
 ```
 
 ### Development guidelines ###
