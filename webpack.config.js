@@ -1,7 +1,6 @@
 const path = require("path");
 const webpack = require("webpack");
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const HtmlWebpackExternalsPlugin = require('html-webpack-externals-plugin')
 
 const PATHS = {
     entryPoint: path.resolve(__dirname, 'src/index.ts'),
@@ -52,29 +51,10 @@ const config = {
             filename: 'samples/index.html',
             template: 'samples/index.html'
         }),
-        new HtmlWebpackExternalsPlugin({
-            outputPath: 'samples/vendors',
-            publicPath: '../',
-            externals: [
-                {
-                    module: 'bootstrap',
-                    entry: 'dist/css/bootstrap.min.css',
-                },
-                {
-                    module: 'angular',
-                    entry: 'angular.min.js',
-                    global: 'angular',
-                },
-                {
-                    module: 'angular-tree-control',
-                    entry: [
-                        'css/tree-control.css',
-                        'css/tree-control-attribute.css',
-                        'angular-tree-control.js'
-                    ],
-                    supplements: ['fonts/', 'images/'],
-                },
-            ],
+        new HtmlWebpackPlugin({
+            inject: 'head',
+            filename: 'samples/index_webworkers.html',
+            template: 'samples/index_webworkers.html'
         })
     ],
     module: {

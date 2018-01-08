@@ -9,169 +9,133 @@
     <%= htmlWebpackPlugin.options.title %>
   </title>
   <meta name="description" content="<%= htmlWebpackPlugin.options.title %>">
+  <style>
+    body {
+      font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif
+    }
+
+    #atoms {
+      margin-top: 20px;
+      background-color: #94bf1e;
+      color: #ffffff;
+      border: 1px solid black;
+    }
+
+    #tracks {
+      margin-top: 20px;
+    }
+  </style>
 </head>
 
 <body>
-  <div class="player">
-    <video id="video"></video>
+    <h3>Basic sample</h3>
+  <div>
+    Sample media assets:
+    <select id="mediaUrl">
+      <option value="https://video-dev.github.io/streams/x36xhzz/url_0/url_462/193039199_mp4_h264_aac_hd_7.ts">TS Segment</option>
+      <option value="https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_480x270_600k/bbb_30fps_480x270_600k_0.m4v">MP4 Init Segment</option>
+      <option value="https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_480x270_600k/bbb_30fps_480x270_600k_1.m4v">MP4 chunk</option>
+    </select>
+    <input type="button" value="Inspect" onclick="inspectMedia()">
   </div>
 
-  <div ng-controller="myCtrl">
-    <div class="row" ng-if="isMp4">
-      <div class="panel panel-default">
-        <div class="col-md-3">
-          <treecontrol class="tree-light" tree-model="mp4Atoms" options="treeOptions" on-selection="showSelected(node)">
-            {{node.type}} ({{node.size}} bytes)
-          </treecontrol>
-        </div>
-        <div class="col-md-9">
-          <ul>
-            <li ng-repeat="(key, value) in selectedNode" ng-if="key !== 'atoms' && key !== 'containerDataOffset'">
-              {{key}}: {{value}}
-            </li>
-          </ul>
-        </div>
-      </div>
-    </div>
+  <div id="atoms"></div>
 
-    <div class="row">
-      <div class="col-md-9">
-        <div class="panel panel-default">
-          <ul>
-            <li ng-repeat="(key, value) in tracks">
-              Track #{{value.id}} - {{value.mimeType}}
-              <ul>
-                <li ng-repeat="frame in value.frames">
-                  <div ng-class="{text_type_bold: frame.frameType === 'I' }">{{frame.timeUs / 1000000 | number: 2}} s - {{frame.frameType}}</div>
-                </li>
-              </ul>
-            </li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  </div>
+  <div id="tracks"></div>
 
   <script>
-    let app = angular.module('myApp', ['treeControl']);
-    app.controller('myCtrl', function ($scope, $http, $q) {
-      $scope.treeOptions = {
-        nodeChildren: 'atoms'
+    function inspectMedia() {
+      var mediaUrl = document.getElementById("mediaUrl").value;
+      if (!mediaUrl) return;
+
+      var req = new XMLHttpRequest();
+      req.open('GET', mediaUrl, true);
+      req.responseType = 'arraybuffer';
+
+      req.onload = function (data) {
+        var arrayBuffer = req.response;
+        if (arrayBuffer) {
+          var byteArray = new Uint8Array(arrayBuffer);
+
+          var demuxer = createDemuxer(mediaUrl);
+          demuxer.append(byteArray);
+          demuxer.end();
+
+          updateAtomsInfo(demuxer);
+          updateTracksInfo(demuxer);
+        }
       };
 
-      $scope.showSelected = function (sel) {
-        $scope.selectedNode = sel;
-      };
+      req.send(null);
+    }
 
-      var mediaSamplesUrl = ['https://pss1.smartfun.cz/stream/50e22a7a-6697-4bf3-a0e2-d17d58c546fb/4/init.mp4'];
-      $scope.isMp4 = true;
+    function createDemuxer(mediaUrl) {
+      // Find out demuxer looking at file extension. "Enough" good for this sample
+      var ext = mediaUrl.split('.').pop();
+      return ext === 'ts' ? inspectorjs.createMpegTSDemuxer() :
+        inspectorjs.createMp4Demuxer();
+    }
 
-      //var mediaSamplesUrl = [
-      //  'http://multiplatform-f.akamaihd.net/i/multi/will/bunny/big_buck_bunny_,640x360_400,640x360_700,640x360_1000,950x540_1500,.f4v.csmil/segment20_0_av.ts' , 
-      //  'http://multiplatform-f.akamaihd.net/i/multi/will/bunny/big_buck_bunny_,640x360_400,640x360_700,640x360_1000,950x540_1500,.f4v.csmil/segment23_0_av.ts'
-      //];
-      //$scope.isMp4 = false;
+    function updateTracksInfo(demuxer) {
+      var el = document.getElementById('tracks');
 
-      var oReq = new XMLHttpRequest();
-      
-      var requests = [];
-      for (var mediaSampleUrl of mediaSamplesUrl) {
-        requests.push($http.get(mediaSampleUrl, {
-          responseType: 'arraybuffer'
-        }));
+      // Remove any child of tracks element
+      while (el.firstChild) {
+        el.removeChild(el.firstChild);
       }
-      $q.all(requests)
-        .then(function successCb(resolve) {
 
-          if (Worker) {
-            var worker = new Worker("inspectorjs-lib.min.js");
-
-            const workerFunc = (worker, action) => {
-              var defered = $q.defer();
-              var promise = defered.promise;
-
-              worker.onmessage = ((event) => {
-                defered.resolve(event.data);
-              });
-              worker.postMessage(action);
-
-              return promise;
-            };
-
-            const executeAppend = (resolve, res) => {
-              if (resolve[0]) {
-                let arrayBuffer = resolve[0].data;
-                if (arrayBuffer) {
-                  var byteArray = new Uint8Array(arrayBuffer);
-                  workerFunc(worker, { type: 'EXECUTE_JOB_APPEND', job: res.job, data: byteArray }).then((res) => {
-                    resolve.splice(0, 1);
-                    executeAppend(resolve, res);
-                  });
-                }
-              } else {
-                workerFunc(worker, { type: 'END_JOB', job: res.job }).then((res) => {
-                  if ($scope.isMp4) {
-                    $scope.mp4Atoms = res.data.atoms;
-                  }
-                  $scope.tracks = res.data.tracks;
-                });
-              }
-            }
-
-            workerFunc(worker, { type: $scope.isMp4 ? 'CREATE_MP4_DEMUX_JOB' : 'CREATE_MPEGTS_DEMUX_JOB' }).then((res) => {
-              executeAppend(resolve, res);
-            });
-
-          } else {
-            var demuxer = $scope.isMp4 ? inspectorjs.createMp4Demuxer() : inspectorjs.createMpegTSDemuxer();
-            for (let r of resolve) {
-              let arrayBuffer = r.data;
-              if (arrayBuffer) {
-                var byteArray = new Uint8Array(arrayBuffer);
-                demuxer.append(byteArray);
-              }
-            }
-            demuxer.end();
-            if ($scope.isMp4) {
-              $scope.mp4Atoms = demuxer.atoms;
-            }
-            $scope.tracks = demuxer.tracks;
-          }
-        }, function errorCb(response) {
-          console.log('Error: ' + response);
-        });
-
-      /*
-      var parsedSegments = 0;
-      if (!$scope.isMp4 && Hls.isSupported()) {
-        var video = document.getElementById('video');
-        var hls = new Hls({
-          enableWorker: false
-        });
-        hls.loadSource('http://multiplatform-f.akamaihd.net/i/multi/april11/hdworld/hdworld_,512x288_450_b,640x360_700_b,768x432_1000_b,1024x576_1400_m,.mp4.csmil/master.m3u8');
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, function () {
-          video.play();
-        });
-        hls.on(Hls.Events.FRAG_LOADED, function (event, segment) {
-          if (segment && segment.payload.byteLength > 0) {
-            let arrayBuffer = segment.payload; // Note: not oReq.responseText
-            if (arrayBuffer) {
-              parsedSegments++;
-              if (parsedSegments >= 3) {
-                demuxer.end();
-                demuxer.resetTracks();
-              }
-              var byteArray = new Uint8Array(arrayBuffer);
-              demuxer.append(byteArray);
-              $scope.tracks = demuxer.tracks;
-              $scope.$apply();
-            }
-          }
-        });
+      for (var trackId in demuxer.tracks) {
+        addTrackInfo(el, demuxer.tracks[trackId]);
       }
-      */
-    });
+    }
+
+    function addTrackInfo(el, track) {
+      var trackEl = document.createElement('div');
+
+      // Add track general info
+      trackEl.innerHTML = '<h4>Track # ' + track.id + ' - ' + track.mimeType + '</h4>';
+
+      // Add frame details
+      var framesEl = document.createElement('ul');
+      for (var frame of track.frames) {
+        var frameEl = document.createElement('li');
+        frameEl.innerHTML = 'Frame ' + frame.frameType + ' - ' + parseFloat(frame.timeUs / 1000000).toFixed(2);
+        framesEl.appendChild(frameEl);
+      }
+      trackEl.appendChild(framesEl);
+
+      // Add track info to dom
+      el.appendChild(trackEl);
+    }
+
+    function updateAtomsInfo(demuxer) {
+      var el = document.getElementById('atoms');
+
+      // Remove any child of tracks element
+      while (el.firstChild) {
+        el.removeChild(el.firstChild);
+      }
+
+      addAtoms(el, demuxer.atoms);
+    }
+
+    // Add information about MP4 atoms
+    function addAtoms(parent, atoms) {
+      if (!atoms || atoms.length === 0) return;
+
+      var containerEl = document.createElement('ul');
+      for (var atom of atoms) {
+        var atomEl = document.createElement('li');
+        atomEl.innerHTML = atom.type + ', ' + atom.size + ' bytes';
+        containerEl.appendChild(atomEl);
+
+        if (atom.atoms && atom.atoms.length > 0) {
+          addAtoms(atomEl, atom.atoms);
+        }
+      }
+
+      parent.appendChild(containerEl);
+    }
   </script>
 </body>
 

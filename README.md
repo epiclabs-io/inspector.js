@@ -8,14 +8,36 @@ just parse it, so inspection process is lightweight and can be done in real time
 
 Besides other things it can be used to analyze the content of MpegTS or MP4 based streams (HLS/DASH/Smooth Streaming).
 
-### How do I get set up? ###
+Note: Inspector.js can be used with web workers which allows to inspect big files without blocking UI. Take a look to our samples to see how to use it.
 
-* npm install
-* npm run build
+### Quick Start ###
+The easiest way to start using inspector.js in your own projects is installing it using npm:
+* npm install inspector.js
+
+Once done, and integrated with your web app, you can start using it. Example:
+```javascript
+    var mediaSamplesUrl = 'https://video-dev.github.io/streams/x36xhzz/url_0/url_462/193039199_mp4_h264_aac_hd_7.ts';
+    var req = new XMLHttpRequest();
+    req.open('GET', mediaSamplesUrl, true);
+    req.responseType = 'arraybuffer';
+
+    req.onload = function (data) {
+    var arrayBuffer = req.response;
+    if (arrayBuffer) {
+        var byteArray = new Uint8Array(arrayBuffer);
+        var demuxer = inspectorjs.createMpegTSDemuxer();
+        demuxer.append(byteArray);
+        demuxer.end();
+
+        // You will find tracks information in demuxer.tracks
+        console.log(demuxer.tracks);
+    }
+```
 
 ### Development guidelines ###
+* Install dependencies
+  * npm install
+* Run devevelopment server
+  * npm run start
 
-* npm install
-* npm run start
-
-Once dev server is started, project is automatically built and compiled whenever you apply any change.
+Once dev server gets started, the project is automatically built whenever you apply any change.
