@@ -1,6 +1,6 @@
 {
   "name": "inspector.js",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Javascript Library that implements MpegTS and MP4 demuxers.",
   "repository": {
     "type": "git",

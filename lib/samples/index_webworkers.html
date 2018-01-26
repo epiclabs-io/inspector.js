@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html ng-app="myApp">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>
+    Webpack App
+  </title>
+  <meta name="description" content="Webpack App">
+
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif
+    }
+
+    #tracks {
+      margin-top: 20px;
+    }
+  </style>
+<script type="text/javascript" src="../inspectorjs-lib.js"></script><script type="text/javascript" src="../inspectorjs-lib.min.js"></script></head>
+
+<body>
+  <h3>Example that demonstrate the use of Inspector.js using its WebWorker interface</h3>
+  <div id="tracks"></div>
+
+  <script>
+    if (typeof (Worker) === "undefined") {
+      alert('Sorry, web workers are not supported by your browser');
+    } else {
+      var worker = new Worker('../inspectorjs-lib.min.js');
+
+      function workerFunc(worker, action, callback) {
+        worker.onmessage = ((event) => {
+          callback(event.data);
+        });
+        worker.postMessage(action);
+      }
+
+      function appendAndProcess(workerResponse, arrayBuffer) {
+        if (arrayBuffer) {
+          var byteArray = new Uint8Array(arrayBuffer);
+          // Append bytes
+          workerFunc(worker, { type: 'EXECUTE_JOB_APPEND', job: workerResponse.job, data: byteArray }, (res) => {
+            // Send end of job and process the output
+            workerFunc(worker, { type: 'END_JOB', job: workerResponse.job }, (res) => {
+              updateTracksInfo(res.data);
+
+              // Terminate worker
+              worker.terminate();
+            });
+          });
+        }
+      }
+
+      function inspectMedia(mediaUrl) {
+        var req = new XMLHttpRequest();
+        req.open('GET', mediaUrl, true);
+        req.responseType = 'arraybuffer';
+
+        req.onload = function (data) {
+          var arrayBuffer = req.response;
+          if (arrayBuffer) {
+            workerFunc(worker, { type: 'CREATE_MPEGTS_DEMUX_JOB' }, (workerResponse) => {
+              appendAndProcess(workerResponse, arrayBuffer);
+            });
+          }
+        };
+
+        req.send(null);
+      }
+
+      function updateTracksInfo(demuxer) {
+        var el = document.getElementById('tracks');
+
+        // Remove any child of tracks element
+        while (el.firstChild) {
+          el.removeChild(el.firstChild);
+        }
+
+        for (var trackId in demuxer.tracks) {
+          addTrackInfo(el, demuxer.tracks[trackId]);
+        }
+      }
+
+      function addTrackInfo(el, track) {
+        var trackEl = document.createElement('div');
+
+        // Add track general info
+        trackEl.innerHTML = '<h4>Track # ' + track.id + ' - ' + track.mimeType + '</h4>';
+
+        // Add frame details
+        var framesEl = document.createElement('ul');
+        for (var frame of track.frames) {
+          var frameEl = document.createElement('li');
+          frameEl.innerHTML = 'Frame ' + frame.frameType + ' - ' + parseFloat(frame.timeUs / 1000000).toFixed(2);
+          framesEl.appendChild(frameEl);
+        }
+        trackEl.appendChild(framesEl);
+
+        // Add track info to dom
+        el.appendChild(trackEl);
+      }
+
+      inspectMedia('https://video-dev.github.io/streams/x36xhzz/url_0/url_462/193039199_mp4_h264_aac_hd_7.ts');
+    }
+  </script>
+</body>
+
+</html>
