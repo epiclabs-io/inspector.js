@@ -1,12 +1,13 @@
 {
   "name": "inspector.js",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Javascript Library that implements MpegTS and MP4 demuxers.",
   "repository": {
     "type": "git",
     "url": "https://github.com/epiclabs-io/inspector.js"
   },
   "main": "./lib/inspector-lib.min.js",
+  "browser": "./lib/inspector-lib.min.js",
   "scripts": {
     "start": "npm run server:dev",
     "server:dev": "webpack-dashboard -- webpack-dev-server",
@@ -20,6 +21,10 @@
   },
   "author": "jesus@epiclabs.io",
   "license": "ISC",
+  "files": [
+    "lib/",
+    "samples/"
+  ],
   "devDependencies": {
     "awesome-typescript-loader": "^3.2.1",
     "babel-core": "^6.25.0",
