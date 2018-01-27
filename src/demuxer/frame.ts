@@ -3,7 +3,7 @@ export default class Frame {
     public static P_FRAME: string = 'P';
     public static B_FRAME: string = 'B';
 
-    constructor (public frameType: string, public timeUs: number) {
+    constructor (public frameType: string, public timeUs: number, public size: number) {
         // do nothing
     }
 }

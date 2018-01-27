@@ -28,7 +28,7 @@ export default class Mp4Track extends Track {
         this.duration = 0;
         for (const sample of this.trun.samples) {
             if (sample.flags) {
-                this.frames.push(new Frame(sample.flags.isSyncFrame ? Frame.IDR_FRAME : Frame.P_FRAME, this.lastPts));
+                this.frames.push(new Frame(sample.flags.isSyncFrame ? Frame.IDR_FRAME : Frame.P_FRAME, this.lastPts, sample.size));
             }
             if (sample.duration) {
                 const duration: number = 1000000 * sample.duration / this.sidx.timescale;

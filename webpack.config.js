@@ -5,7 +5,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const PATHS = {
     entryPoint: path.resolve(__dirname, 'src/index.ts'),
     bundles: path.resolve(__dirname, 'lib'),
-}
+};
 
 const config = {
     // These are the entry point of our library. We tell webpack to use
@@ -78,6 +78,6 @@ const config = {
             exclude: /node_modules/
         }]
     }
-}
+};
 
 module.exports = config;

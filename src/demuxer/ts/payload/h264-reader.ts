@@ -116,7 +116,7 @@ export default class H264Reader extends PayloadReader {
         } else if (nalType === NAL_UNIT_TYPE.AUD) {
             this.parseAUDNALUnit(start, limit);
         } else if (nalType === NAL_UNIT_TYPE.IDR) {
-            this.addNewFrame(SLICE_TYPE.I);
+            this.addNewFrame(SLICE_TYPE.I, limit - start);
         } else if (nalType === NAL_UNIT_TYPE.SEI) {
             this.parseSEINALUnit(start, limit);
         } else if (nalType === NAL_UNIT_TYPE.SLICE) {
@@ -170,7 +170,7 @@ export default class H264Reader extends PayloadReader {
         sliceParser.skipBytes(4);
         sliceParser.readUEG();
         const sliceType: number = sliceParser.readUEG();
-        this.addNewFrame(sliceType);
+        this.addNewFrame(sliceType, limit - start);
         sliceParser.destroy();
         sliceParser = null;
     }
@@ -223,8 +223,8 @@ export default class H264Reader extends PayloadReader {
         }
     }
 
-     private addNewFrame(frameType: number): void {
-        this.frames.push(new Frame(this.getSliceTypeName(frameType), this.timeUs));
+     private addNewFrame(frameType: number, frameSize: number): void {
+        this.frames.push(new Frame(this.getSliceTypeName(frameType), this.timeUs, frameSize));
      }
 
 }

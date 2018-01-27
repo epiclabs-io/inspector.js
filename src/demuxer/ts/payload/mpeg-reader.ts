@@ -174,7 +174,7 @@ export default class MpegReader extends PayloadReader {
             return 0;
         }
         this.state = MpegReader.STATE_FIND_SYNC;
-        this.frames.push(new Frame(Frame.IDR_FRAME, this.timeUs));
+        this.frames.push(new Frame(Frame.IDR_FRAME, this.timeUs, this.currentFrameSize));
         this.timeUs = this.timeUs + this.frameDuration;
         return MpegReader.HEADER_SIZE + this.currentFrameSize;
     }

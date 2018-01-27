@@ -74,6 +74,7 @@ export default class MpegTSDemuxer implements IDemuxer {
                 this.tracks[trackId].update();
             }
         }
+        this.data = null;
     }
 
     private resetTracks(): void {
