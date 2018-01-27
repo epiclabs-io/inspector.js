@@ -94,7 +94,7 @@
         var framesEl = document.createElement('ul');
         for (var frame of track.frames) {
           var frameEl = document.createElement('li');
-          frameEl.innerHTML = 'Frame ' + frame.frameType + ' - ' + parseFloat(frame.timeUs / 1000000).toFixed(2);
+          frameEl.innerHTML = 'Frame ' + frame.frameType + ' - ' + parseFloat(frame.timeUs / 1000000).toFixed(3);
           framesEl.appendChild(frameEl);
         }
         trackEl.appendChild(framesEl);
