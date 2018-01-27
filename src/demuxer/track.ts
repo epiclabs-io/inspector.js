@@ -31,7 +31,10 @@ export default class Track {
     }
 
     public update(): void {
-        this.frames = this.getFrames();
+        this.frames = this.getFrames().sort((a: Frame, b: Frame): number => {
+            return a.timeUs - b.timeUs;
+        });
+
         this.duration = this.getDuration();
     }
 }

@@ -32,7 +32,7 @@ export default class MpegTSDemuxer implements IDemuxer {
         this.tracks = {};
     }
 
-    public append(data: Uint8Array): ITrackInfo[] {
+    public append(data: Uint8Array): void {
         if (!this.data || this.data.byteLength === 0 || this.dataOffset >= this.data.byteLength) {
             this.data = data;
             this.dataOffset = 0;
@@ -60,31 +60,18 @@ export default class MpegTSDemuxer implements IDemuxer {
             this.data = this.data.subarray(this.dataOffset);
             this.dataOffset = 0;
         }
-        return this.getTracksInfo();
-    }
-
-    public getTracksInfo(): ITrackInfo[] {
-        const trackInfos: ITrackInfo[] = [];
-        for (var trackId in this.tracks) {
+        for (const trackId in this.tracks) {
             if (this.tracks.hasOwnProperty(trackId)) {
-                const track: Track = this.tracks[trackId];
-                track.update();
-                trackInfos.push({
-                    id: track.id,
-                    mimeType: track.mimeType,
-                    type: track.type,
-                    frames: track.frames,
-                    duration: track.duration,
-                });
+                this.tracks[trackId].update();
             }
         }
-        return trackInfos;
     }
 
     public end(): void {
-        for (let id in this.tracks) {
-            if (this.tracks.hasOwnProperty(id)) {
-                (this.tracks[id] as TSTrack).pes.flush();
+        for (const trackId in this.tracks) {
+            if (this.tracks.hasOwnProperty(trackId)) {
+                (this.tracks[trackId] as TSTrack).pes.flush();
+                this.tracks[trackId].update();
             }
         }
     }

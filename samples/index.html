@@ -33,6 +33,7 @@
     Sample media assets:
     <select id="mediaUrl">
       <option value="https://video-dev.github.io/streams/x36xhzz/url_0/url_462/193039199_mp4_h264_aac_hd_7.ts">TS Segment</option>
+      <option value="http://multiplatform-f.akamaihd.net/i/multi/will/bunny/big_buck_bunny_,640x360_400,640x360_700,640x360_1000,950x540_1500,.f4v.csmil/segment2_0_av.ts">Another TS Segment</option>
       <option value="https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_480x270_600k/bbb_30fps_480x270_600k_0.m4v">MP4 Init Segment</option>
       <option value="https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_480x270_600k/bbb_30fps_480x270_600k_1.m4v">MP4 chunk</option>
     </select>
@@ -99,7 +100,7 @@
       var framesEl = document.createElement('ul');
       for (var frame of track.frames) {
         var frameEl = document.createElement('li');
-        frameEl.innerHTML = 'Frame ' + frame.frameType + ' - ' + parseFloat(frame.timeUs / 1000000).toFixed(2);
+        frameEl.innerHTML = 'Frame ' + frame.frameType + ' - ' + parseFloat(frame.timeUs / 1000000).toFixed(3);
         framesEl.appendChild(frameEl);
       }
       trackEl.appendChild(framesEl);
