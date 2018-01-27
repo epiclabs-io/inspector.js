@@ -2,7 +2,7 @@ import BitReader from '../../../utils/bit-reader';
 import PayloadReader from './payload-reader';
 import Frame from '../../frame';
 import SPSParser from '../../../codecs/h264/sps-parser';
-import {Sps} from '../../../codecs/h264/nal-units';
+import { Sps } from '../../../codecs/h264/nal-units';
 import Track from '../../track';
 
 enum NAL_UNIT_TYPE {
@@ -35,6 +35,7 @@ export class Fraction {
 
 export default class H264Reader extends PayloadReader {
     public sps: Sps;
+    public pps: boolean;
     public pendingBytes: number;
 
     constructor() {
@@ -113,6 +114,8 @@ export default class H264Reader extends PayloadReader {
     private processNALUnit(start: number, limit: number, nalType: number): void {
         if (nalType === NAL_UNIT_TYPE.SPS) {
             this.parseSPSNALUnit(start, limit);
+        } else if (nalType === NAL_UNIT_TYPE.PPS) {
+            this.pps = true;
         } else if (nalType === NAL_UNIT_TYPE.AUD) {
             this.parseAUDNALUnit(start, limit);
         } else if (nalType === NAL_UNIT_TYPE.IDR) {
@@ -170,7 +173,12 @@ export default class H264Reader extends PayloadReader {
         sliceParser.skipBytes(4);
         sliceParser.readUEG();
         const sliceType: number = sliceParser.readUEG();
-        this.addNewFrame(this.getSliceTypeName(sliceType), limit - start);
+        const type: string = this.getSliceTypeName(sliceType);
+        if (this.sps && this.pps) {
+            this.addNewFrame(type, limit - start);
+        } else {
+            console.warn('Slice ' + type + ' received without sps/pps been set');
+        }
         sliceParser.destroy();
         sliceParser = null;
     }
@@ -223,8 +231,8 @@ export default class H264Reader extends PayloadReader {
         }
     }
 
-     private addNewFrame(frameType: string, frameSize: number): void {
+    private addNewFrame(frameType: string, frameSize: number): void {
         this.frames.push(new Frame(frameType, this.timeUs, frameSize));
-     }
+    }
 
 }
