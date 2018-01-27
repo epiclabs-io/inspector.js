@@ -60,6 +60,13 @@ export default class H264Reader extends PayloadReader {
         }
     }
 
+    public reset(): void {
+        super.reset();
+
+        this.sps = null;
+        this.pps = false;
+    }
+
     public consumeData(pts: number): void {
         if (!this.dataBuffer) {
             return;
