@@ -2,7 +2,6 @@ import BitReader from '../../utils/bit-reader';
 import PESReader from './pes-reader';
 import TSTrack from './ts-track';
 import Track from '../track';
-import ITrackInfo from '../track-info';
 import IDemuxer from '../demuxer';
 
 enum CONTAINER_TYPE {

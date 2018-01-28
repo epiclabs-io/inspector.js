@@ -25,6 +25,8 @@ export default class PayloadReader {
     public reset(): void {
         this.frames = [];
         this.dataOffset = 0;
+        this.firstTimestamp = -1;
+        this.timeUs = -1;
     }
 
     public flush(pts: number): void {
