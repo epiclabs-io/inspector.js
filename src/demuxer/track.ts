@@ -17,6 +17,7 @@ export default class Track {
 
     public frames: Frame[];
     public duration: number;
+    public metadata: { [id: number] : Object };
 
     constructor(public id: number, public type: string, public mimeType: string) {
         this.frames = [];
@@ -30,11 +31,16 @@ export default class Track {
         return this.duration;
     }
 
+    public getMetadata(): {} {
+        return {};
+    }
+
     public update(): void {
         this.frames = this.getFrames().sort((a: Frame, b: Frame): number => {
             return a.timeUs - b.timeUs;
         });
 
         this.duration = this.getDuration();
+        this.metadata = this.getMetadata();
     }
 }

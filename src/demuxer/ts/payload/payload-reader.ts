@@ -1,5 +1,6 @@
 import BitReader from '../../../utils/bit-reader';
 import Frame from '../../frame';
+import { Sps } from '../../../codecs/h264/nal-units';
 
 export default class PayloadReader {
     public firstTimestamp: number = -1;
@@ -30,7 +31,7 @@ export default class PayloadReader {
     }
 
     public flush(pts: number): void {
-        if (this.dataBuffer.byteLength > 0) {
+        if (this.dataBuffer && this.dataBuffer.byteLength > 0) {
             this.consumeData(pts);
             this.dataBuffer = null;
         }
