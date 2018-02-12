@@ -2,6 +2,7 @@ import * as index from '../index';
 import { IDemuxer } from '../demuxer/demuxer';
 import { Mp4Demuxer } from '../demuxer/mp4/mp4-demuxer';
 import { MpegTSDemuxer } from '../demuxer/ts/mpegts-demuxer';
+import { WebMDemuxer } from '../demuxer/webm/webm-demuxer';
 
 export class WebWorker {
     public static onMessage = ((event) => {
@@ -12,6 +13,9 @@ export class WebWorker {
                     break;
                 case index.InspectorActionType.CREATE_MPEGTS_DEMUX_JOB:
                     WebWorker.createMpegTSDemuxJob(event);
+                    break;
+                case index.InspectorActionType.CREATE_WEBM_DEMUX_JOB:
+                    WebWorker.createWebMDemuxJob(event);
                     break;
                 case index.InspectorActionType.EXECUTE_JOB_APPEND:
                     WebWorker.executeJobAppend(event);
@@ -44,6 +48,17 @@ export class WebWorker {
         WebWorker.jobs.set(guid, demuxer);
         postMessage({
             type: index.InspectorActionType.CREATE_MPEGTS_DEMUX_JOB_RESPONSE,
+            job: guid,
+            data: demuxer,
+        });
+    }
+
+    private static createWebMDemuxJob(event: index.InspectorAction): void {
+        const guid: String = WebWorker.createGuid();
+        const demuxer: WebMDemuxer = index.createWebMDemuxer();
+        WebWorker.jobs.set(guid, demuxer);
+        postMessage({
+            type: index.InspectorActionType.CREATE_WEBM_DEMUX_JOB_RESPONSE,
             job: guid,
             data: demuxer,
         });
