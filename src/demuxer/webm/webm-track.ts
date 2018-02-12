@@ -1,30 +1,20 @@
 import { Track } from '../track';
 import { Frame } from '../frame';
-
-export class ITrackInfo {
-    TrackNumber: number;
-    TrackUID: number;
-    TrackType: number;
-    DefaultDuration: number;
-    TrackTimecodeScale: number;
-    CodecID: string;
-    CodecName: string;
-    Video?: any;
-    Audio?: any;
-}
+import { ITrackInfo } from './elements/track-info';
 
 export class WebMTrack extends Track {
     private lastPts: number;
-    private defaultDuration: number;
-    private timescale: number;
+    private nsPerFrame: number;
+    private timecodeScale: number;
 
     constructor(info: ITrackInfo) {
         const type: string = WebMTrack.getType(info.TrackType);
-        super(info.TrackNumber, 'video', type + '/' + info.CodecName);
+        const codec: string = info.CodecName || WebMTrack.getCodecNameFromID(info.CodecID);
+        super(info.TrackNumber, type, type + '/' + codec);
 
         this.lastPts = 0;
-        this.defaultDuration = info.DefaultDuration;
-        this.timescale = info.TrackTimecodeScale;
+        this.nsPerFrame = info.DefaultDuration;
+        this.timecodeScale = info.TrackTimecodeScale;
     }
 
     private static getType(type: number): string {
@@ -53,6 +43,17 @@ export class WebMTrack extends Track {
             default:
             return Track.TYPE_UNKNOWN;
         }
+    }
+
+    private static getCodecNameFromID(codecID: string): string {
+        if (!codecID) {
+            return null;
+        }
+        const pos: number = codecID.indexOf('_');
+        if (pos < 0) {
+            return codecID;
+        }
+        return codecID.substr(pos + 1);
     }
 
     public getFrames(): Frame[] {

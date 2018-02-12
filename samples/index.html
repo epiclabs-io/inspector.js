@@ -37,6 +37,8 @@
       <option value="https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_480x270_600k/bbb_30fps_480x270_600k_0.m4v">MP4 Init Segment</option>
       <option value="https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_480x270_600k/bbb_30fps_480x270_600k_1.m4v">MP4 chunk</option>
       <option value="http://well-to-do-view.surge.sh/big-buck-bunny_trailer.webm">WebM file</option>
+      <option value="https://storage.googleapis.com/shaka-demo-assets/sintel-webm-only/v-0240p-0300k-vp9.webm">WebM video segment of DASH stream</option>
+      <option value="https://storage.googleapis.com/shaka-demo-assets/sintel-webm-only/a-eng-0128k-libopus.webm">WebM audio segment of DASH stream</option>
     </select>
     <input type="button" value="Inspect" onclick="inspectMedia()">
   </div>
@@ -123,7 +125,10 @@
         el.removeChild(el.firstChild);
       }
 
-      addAtoms(el, demuxer.atoms);
+      // Only makes sense for MP4 files
+      if (demuxer.atoms) {
+        addAtoms(el, demuxer.atoms);
+      }
     }
 
     // Add information about MP4 atoms
@@ -143,6 +148,7 @@
 
       parent.appendChild(containerEl);
     }
+
   </script>
 </body>
 

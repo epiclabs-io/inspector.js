@@ -6,7 +6,10 @@ import { Frame } from '../frame';
 import { Vint, EbmlElement, IEbmlElementInfo } from './ebml/ebml-types';
 import { getEbmlElementInfo } from './ebml/schema';
 import { EbmlParser } from './ebml/ebml-parser';
-import { WebMTrack, ITrackInfo } from './webm-track';
+import { WebMTrack } from './webm-track';
+import { IEBMLInfo } from './elements/ebml-info';
+import { ITrackInfo } from './elements/track-info';
+import { ISegmentInfo } from './elements/segment-info';
 
 export class WebMDemuxer implements IDemuxer {
     public tracks: { [id: number] : Track; };
@@ -14,6 +17,8 @@ export class WebMDemuxer implements IDemuxer {
     private data: Uint8Array;
     private dataOffset: number;
     private elements: EbmlElement[];
+    private ebmlInfo: IEBMLInfo;
+    private segmentInfo: ISegmentInfo;
 
     constructor() {
         this.tracks = {};
@@ -81,7 +86,7 @@ export class WebMDemuxer implements IDemuxer {
         const size: Vint = EbmlParser.readVint(this.data, this.dataOffset);
         this.dataOffset += size.length;
         if (size !== null) {
-            element.dataSize = size.value;
+            element.size = size.value;
 
             // Manage unknown size case
             if (size.value === -1) {
@@ -93,10 +98,10 @@ export class WebMDemuxer implements IDemuxer {
             // If type is m, we are in a container element
             if (element.type !== 'm') {
                 if (element.end !== -1) {
-                    const data: Uint8Array = this.data.subarray(this.dataOffset, this.dataOffset + element.dataSize);
+                    const data: Uint8Array = this.data.subarray(this.dataOffset, this.dataOffset + element.size);
                     this.parseElementData(element, data);
                 }
-                this.dataOffset += element.dataSize;
+                this.dataOffset += element.size;
             }
         }
 
@@ -139,8 +144,15 @@ export class WebMDemuxer implements IDemuxer {
     }
 
     private processElement(element: EbmlElement): void {
-        if (element.name === 'Tracks') {
+        if (element.name === 'EBML') {
+            this.ebmlInfo = this.flatChilds(element);
+            if (this.ebmlInfo.DocType !== 'webm') {
+                console.warn('WebM document doesnt have the right doc type (webm != ' + this.ebmlInfo.DocType + ')');
+            }
+        } else if (element.name === 'Tracks') {
             this.processTracksElement(element);
+        } else if (element.name === 'Info') {
+            this.segmentInfo = this.flatChilds(element);
         }
     }
 

@@ -5,7 +5,7 @@ export class Vint {
 }
 
 export class EbmlElement {
-    public dataSize: number;
+    public size: number;
     public data: String | number | Date | Uint8Array;
     public childs: EbmlElement[];
 
