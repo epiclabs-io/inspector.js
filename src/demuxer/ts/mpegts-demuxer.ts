@@ -1,8 +1,8 @@
-import BitReader from '../../utils/bit-reader';
-import PESReader from './pes-reader';
-import TSTrack from './ts-track';
-import Track from '../track';
-import IDemuxer from '../demuxer';
+import { BitReader } from '../../utils/bit-reader';
+import { PESReader } from './pes-reader';
+import { TSTrack } from './ts-track';
+import { Track } from '../track';
+import { IDemuxer } from '../demuxer';
 
 enum CONTAINER_TYPE {
     UNKNOWN = 1,
@@ -10,7 +10,7 @@ enum CONTAINER_TYPE {
     RAW_AAC,
 }
 
-export default class MpegTSDemuxer implements IDemuxer {
+export class MpegTSDemuxer implements IDemuxer {
     private static MPEGTS_SYNC: number = 0x47;
     private static MPEGTS_PACKET_SIZE: number = 187;
 
@@ -43,6 +43,27 @@ export default class MpegTSDemuxer implements IDemuxer {
             this.data = temp;
         }
 
+        this.parse();
+
+        if (this.dataOffset > 0) {
+            this.data = this.data.subarray(this.dataOffset);
+            this.dataOffset = 0;
+        }
+
+        this.updateTracks();
+    }
+
+    public end(): void {
+        for (const trackId in this.tracks) {
+            if (this.tracks.hasOwnProperty(trackId)) {
+                (this.tracks[trackId] as TSTrack).pes.flush();
+                this.tracks[trackId].update();
+            }
+        }
+        this.data = null;
+    }
+
+    private parse(): void {
         this.findContainerType();
 
         if (this.containerType === CONTAINER_TYPE.MPEG_TS) {
@@ -54,26 +75,14 @@ export default class MpegTSDemuxer implements IDemuxer {
                 new PESReader(0, PESReader.TS_STREAM_TYPE_AAC));
             (this.tracks[0] as TSTrack).pes.appendData(false, dataParser);
         }
-
-        if (this.dataOffset > 0) {
-            this.data = this.data.subarray(this.dataOffset);
-            this.dataOffset = 0;
-        }
-        for (const trackId in this.tracks) {
-            if (this.tracks.hasOwnProperty(trackId)) {
-                this.tracks[trackId].update();
-            }
-        }
     }
 
-    public end(): void {
+    private updateTracks(): void {
         for (const trackId in this.tracks) {
             if (this.tracks.hasOwnProperty(trackId)) {
-                (this.tracks[trackId] as TSTrack).pes.flush();
                 this.tracks[trackId].update();
             }
         }
-        this.data = null;
     }
 
     private resetTracks(): void {

@@ -1,9 +1,9 @@
 import * as index from '../index';
-import IDemuxer from '../demuxer/demuxer';
-import Mp4Demuxer from '../demuxer/mp4/mp4-demuxer';
-import MpegTSDemuxer from '../demuxer/ts/mpegts-demuxer';
+import { IDemuxer } from '../demuxer/demuxer';
+import { Mp4Demuxer } from '../demuxer/mp4/mp4-demuxer';
+import { MpegTSDemuxer } from '../demuxer/ts/mpegts-demuxer';
 
-export default class WebWorker {
+export class WebWorker {
     public static onMessage = ((event) => {
         if (event.data) {
             switch (event.data.type) {

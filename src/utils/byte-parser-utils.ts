@@ -7,6 +7,7 @@ export class Mp4SampleFlags {
     public isNonSyncSample: number;
     public degradationPriority: number;
 }
+declare function escape(s: string): string;
 
 export default class ByteParserUtils {
     public static parseStringWithLength(buffer: Uint8Array, offset: number, end: number): string {
@@ -19,6 +20,15 @@ export default class ByteParserUtils {
         return result;
     }
 
+    public static parseString(buffer: Uint8Array, offset: number, end: number):  string {
+        return String.fromCharCode.apply(null, buffer.subarray(offset, end));
+    }
+
+    public static parseUTF8String(buffer: Uint8Array, offset: number, end: number):  string {
+        const str: string = String.fromCharCode.apply(null, buffer.subarray(offset, end));
+        return decodeURIComponent(escape(str));
+    }
+
     public static parseNullTerminatedString(buffer: Uint8Array, offset: number, end: number): string {
         let result: string = '';
         for (let i: number = offset + 1; i < end && buffer[i] !== 0; i++) {
@@ -27,31 +37,40 @@ export default class ByteParserUtils {
         return result;
     }
 
-    public static parseUint32(buffer: Uint8Array, offset: number): number {
-        // Js tric: The only JavaScript operator that works using unsigned 32-bit integers is >>>
-        // it can be used to convert a signed integer to an unsigned one
-        return (buffer[offset++] << 24 |
-            buffer[offset++] << 16 |
-            buffer[offset++] << 8  |
-            buffer[offset]) >>> 0;
+    public static parseFloat(buffer: Uint8Array, offset: number, len: number): number {
+        const v: DataView = new DataView(buffer.buffer, buffer.byteOffset, len);
+        if (len === 8) {
+            return v.getFloat64(offset);
+        }
+        return v.getFloat32(offset);
     }
 
-    public static parseLong64(buffer: Uint8Array, offset: number): number {
-        // Js tric: The only JavaScript operator that works using unsigned 32-bit integers is >>>
-        // it can be used to convert a signed integer to an unsigned one
-        return (buffer[offset++] << 56 |
-            buffer[offset++] << 48 |
-            buffer[offset++] << 40 |
-            buffer[offset++] << 32 |
-            buffer[offset++] << 24 |
-            buffer[offset++] << 16 |
-            buffer[offset++] << 8  |
-            buffer[offset]) >>> 0;
+    public static parseInt(buffer: Uint8Array, offset: number, len: number): number {
+        let value: number = 0;
+        for (let i: number = 0; i < len; i++) {
+            value |= (buffer[offset + i] << ((len - i - 1) * 8));
+        }
+        return value;
+    }
+
+    public static parseUint(buffer: Uint8Array, offset: number, len: number): number {
+        let value: number = 0;
+        for (let i: number = 0; i < len; i++) {
+            value |= (buffer[offset + i] << ((len - i - 1) * 8)) >>> 0;
+        }
+        return value;
     }
 
     public static parseUint16(buffer: Uint8Array, offset: number): number {
-        return (buffer[offset++] << 8  |
-            buffer[offset]) >>> 0;
+        return ByteParserUtils.parseUint(buffer, offset, 2);
+    }
+
+    public static parseUint32(buffer: Uint8Array, offset: number): number {
+        return ByteParserUtils.parseUint(buffer, offset, 4);
+    }
+
+    public static parseLong64(buffer: Uint8Array, offset: number): number {
+        return ByteParserUtils.parseUint(buffer, offset, 8);
     }
 
     public static parseIsoBoxType(buffer: Uint8Array, offset: number): string {
@@ -77,5 +96,13 @@ export default class ByteParserUtils {
             isNonSyncSample: flags[1] & 0x01,
             degradationPriority: (flags[2] << 8) | flags[3]
         };
+    }
+
+    public static parseBufferToHex(buffer: Uint8Array, offset: number, end: number): string {
+        let str: string = '';
+        for (let i: number = offset; i < end; i++) {
+            str += buffer[i].toString(16);
+        }
+        return str;
     }
 }

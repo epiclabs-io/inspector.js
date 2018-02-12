@@ -1,4 +1,4 @@
-export default class BitReader {
+export class BitReader {
     private workingBytesAvailable: number;
     private workingWord: number;
     private workingBitsAvailable: number;

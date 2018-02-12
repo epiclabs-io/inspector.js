@@ -1,5 +1,5 @@
-import {Atom} from './atom';
-import {VideoAtom} from './helpers/video-atom';
+import { Atom } from './atom';
+import { VideoAtom } from './helpers/video-atom';
 
 export class Hvc1 extends VideoAtom {
     public static parse(data: Uint8Array): Atom {

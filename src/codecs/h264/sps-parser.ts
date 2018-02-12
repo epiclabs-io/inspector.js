@@ -1,7 +1,7 @@
-import BitReader from '../../utils/bit-reader';
+import { BitReader } from '../../utils/bit-reader';
 import { Sps, Size, FrameRate } from './nal-units';
 
-export default class SPSParser {
+export class SPSParser {
     public static parseSPS(data: Uint8Array): Sps {
         let gb: BitReader = new BitReader(data);
         const profile_idc: number = gb.readByte();

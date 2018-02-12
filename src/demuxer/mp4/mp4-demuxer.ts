@@ -1,13 +1,13 @@
 import ByteParserUtils from '../../utils/byte-parser-utils';
 import { boxesParsers } from './atoms';
 import { Atom, ContainerAtom } from './atoms/atom';
-import Track from '../track';
-import Mp4Track from './mp4-track';
+import { Track } from '../track';
+import { Mp4Track } from './mp4-track';
 import { Tkhd } from './atoms/tkhd';
-import IDemuxer from '../demuxer';
-import Frame from '../frame';
+import { IDemuxer } from '../demuxer';
+import { Frame } from '../frame';
 
-export default class Mp4Demuxer implements IDemuxer {
+export class Mp4Demuxer implements IDemuxer {
     public tracks: { [id: number] : Track; };
 
     private data: Uint8Array;

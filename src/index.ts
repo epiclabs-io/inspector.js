@@ -1,7 +1,8 @@
-import MpegTSDemuxer from './demuxer/ts/mpegts-demuxer';
-import Mp4Demuxer from './demuxer/mp4/mp4-demuxer';
-import IDemuxer from './demuxer/demuxer';
-import WebWorker from './utils/web-worker';
+import { MpegTSDemuxer } from './demuxer/ts/mpegts-demuxer';
+import { Mp4Demuxer } from './demuxer/mp4/mp4-demuxer';
+import { WebMDemuxer } from './demuxer/webm/webm-demuxer';
+import { IDemuxer } from './demuxer/demuxer';
+import { WebWorker } from './utils/web-worker';
 
 export function createMpegTSDemuxer(): MpegTSDemuxer {
     return new MpegTSDemuxer();
@@ -9,6 +10,10 @@ export function createMpegTSDemuxer(): MpegTSDemuxer {
 
 export function createMp4Demuxer(): Mp4Demuxer {
     return new Mp4Demuxer();
+}
+
+export function createWebMDemuxer(): WebMDemuxer {
+    return new WebMDemuxer();
 }
 
 export enum InspectorActionType {

@@ -36,6 +36,7 @@
       <option value="http://multiplatform-f.akamaihd.net/i/multi/will/bunny/big_buck_bunny_,640x360_400,640x360_700,640x360_1000,950x540_1500,.f4v.csmil/segment2_0_av.ts">Another TS Segment</option>
       <option value="https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_480x270_600k/bbb_30fps_480x270_600k_0.m4v">MP4 Init Segment</option>
       <option value="https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_480x270_600k/bbb_30fps_480x270_600k_1.m4v">MP4 chunk</option>
+      <option value="http://well-to-do-view.surge.sh/big-buck-bunny_trailer.webm">WebM file</option>
     </select>
     <input type="button" value="Inspect" onclick="inspectMedia()">
   </div>
@@ -73,8 +74,13 @@
     function createDemuxer(mediaUrl) {
       // Find out demuxer looking at file extension. "Enough" good for this sample
       var ext = mediaUrl.split('.').pop();
-      return ext === 'ts' ? inspectorjs.createMpegTSDemuxer() :
-        inspectorjs.createMp4Demuxer();
+      if (ext === 'ts') {
+        return inspectorjs.createMpegTSDemuxer();
+      } else if (ext === 'webm') {
+        return inspectorjs.createWebMDemuxer();
+      } else {
+        return inspectorjs.createMp4Demuxer();
+      }
     }
 
     function updateTracksInfo(demuxer) {

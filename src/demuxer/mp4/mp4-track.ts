@@ -1,10 +1,10 @@
-import Track from '../track';
+import { Track } from '../track';
 import { Atom } from './atoms/atom';
-import Frame from '../frame';
+import { Frame } from '../frame';
 import { Sidx } from './atoms/sidx';
 import { Trun } from './atoms/trun';
 
-export default class Mp4Track extends Track {
+export class Mp4Track extends Track {
     private sidx: Sidx;
     private trun: Trun;
     private lastPts: number;
