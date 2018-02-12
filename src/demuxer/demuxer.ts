@@ -1,6 +1,6 @@
-import Track from './track';
+import { Track } from './track';
 
-export default interface IDemuxer {
+export interface IDemuxer {
     tracks: { [id: number] : Track; };
 
     append(data: Uint8Array): void;

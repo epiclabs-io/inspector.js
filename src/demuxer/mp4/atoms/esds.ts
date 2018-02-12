@@ -1,5 +1,5 @@
 import ByteParserUtils from '../../../utils/byte-parser-utils';
-import {Atom} from './atom';
+import { Atom } from './atom';
 
 export class DecoderConfigDescriptor {
     constructor(public tag: number, public length: number,

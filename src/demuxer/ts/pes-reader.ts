@@ -1,12 +1,12 @@
-import BitReader from '../../utils/bit-reader';
-import PayloadReader from './payload/payload-reader';
-import UnknownReader from './payload/unknown-reader';
-import AdtsReader from './payload/adts-reader';
-import H264Reader from './payload/h264-reader';
-import ID3Reader from './payload/id3-reader';
-import MpegReader from './payload/mpeg-reader';
+import { BitReader } from '../../utils/bit-reader';
+import { PayloadReader } from './payload/payload-reader';
+import { UnknownReader } from './payload/unknown-reader';
+import { AdtsReader } from './payload/adts-reader';
+import { H264Reader } from './payload/h264-reader';
+import { ID3Reader } from './payload/id3-reader';
+import { MpegReader } from './payload/mpeg-reader';
 
-export default class PESReader {
+export class PESReader {
     public static TS_STREAM_TYPE_AAC: number = 0x0F;
     public static TS_STREAM_TYPE_H264: number = 0x1B;
     public static TS_STREAM_TYPE_ID3: number = 0x15;

@@ -1,12 +1,14 @@
 import ByteParserUtils from '../../../utils/byte-parser-utils';
-import PayloadReader from './payload-reader';
-import Frame from '../../frame';
+import { PayloadReader } from './payload-reader';
+import { Frame } from '../../frame';
 
-export default class MpegReader extends PayloadReader {
-    private static STATE_FIND_SYNC: number = 1;
-    private static STATE_READ_HEADER: number = 2;
-    private static STATE_READ_FRAME: number = 3;
+enum State {
+    FIND_SYNC = 1,
+    READ_HEADER = 2,
+    READ_FRAME = 3
+}
 
+export class MpegReader extends PayloadReader {
     private static HEADER_SIZE: number = 4;
 
     private static SAMPLING_RATE_V1: number[] = [44100, 48000, 32000];
@@ -31,7 +33,7 @@ export default class MpegReader extends PayloadReader {
     public frameDuration: number;
     public mimeType: string;
 
-    private state: number;
+    private state: State;
 
     constructor () {
         super();
@@ -41,7 +43,7 @@ export default class MpegReader extends PayloadReader {
         this.currentFrameSize = 0;
         this.frameDuration = 0;
         this.mimeType = MpegReader.MIME_TYPE_BY_LAYER[2];
-        this.state = MpegReader.STATE_FIND_SYNC;
+        this.state = State.FIND_SYNC;
         this.dataOffset = 0;
     }
 
@@ -60,13 +62,13 @@ export default class MpegReader extends PayloadReader {
             this.firstTimestamp = this.timeUs;
         }
         while (this.dataOffset < this.dataBuffer.byteLength) {
-            if (this.state ===  MpegReader.STATE_FIND_SYNC) {
+            if (this.state ===  State.FIND_SYNC) {
                 this.findHeader();
-            } else if (this.state === MpegReader.STATE_READ_HEADER) {
+            } else if (this.state === State.READ_HEADER) {
                 if (!this.readHeader()) {
                     break;
                 }
-            } else if (this.state === MpegReader.STATE_READ_FRAME) {
+            } else if (this.state === State.READ_FRAME) {
                 const len: number = this.readFrame();
                 if (len === 0) {
                     break;
@@ -88,7 +90,7 @@ export default class MpegReader extends PayloadReader {
 
             if (found) {
                 lastByteWasFF = false;
-                this.state = MpegReader.STATE_READ_HEADER;
+                this.state = State.READ_HEADER;
                 this.dataOffset = i - 1;
                 return;
             }
@@ -104,10 +106,10 @@ export default class MpegReader extends PayloadReader {
 
         const header: number = ByteParserUtils.parseUint32(this.dataBuffer, this.dataOffset);
         if (!this.parseHeader(header)) {
-            this.state = MpegReader.STATE_FIND_SYNC;
+            this.state = State.FIND_SYNC;
             this.dataOffset++;
         } else {
-            this.state = MpegReader.STATE_READ_FRAME;
+            this.state = State.READ_FRAME;
         }
         return true;
     }
@@ -173,7 +175,7 @@ export default class MpegReader extends PayloadReader {
         if ((this.dataBuffer.byteLength - this.dataOffset) < (MpegReader.HEADER_SIZE + this.currentFrameSize)) {
             return 0;
         }
-        this.state = MpegReader.STATE_FIND_SYNC;
+        this.state = State.FIND_SYNC;
         this.frames.push(new Frame(Frame.IDR_FRAME, this.timeUs, this.currentFrameSize));
         this.timeUs = this.timeUs + this.frameDuration;
         return MpegReader.HEADER_SIZE + this.currentFrameSize;

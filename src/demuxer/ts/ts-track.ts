@@ -1,11 +1,11 @@
-import Track from '../track';
-import Frame from '../frame';
-import PESReader from './pes-reader';
-import H264Reader from './payload/h264-reader';
-import AdtsReader from './payload/adts-reader';
+import { Track } from '../track';
+import { Frame } from '../frame';
+import { PESReader } from './pes-reader';
+import { H264Reader } from './payload/h264-reader';
+import { AdtsReader } from './payload/adts-reader';
 import { Sps } from '../../codecs/h264/nal-units';
 
-export default class TSTrack extends Track {
+export class TSTrack extends Track {
     constructor(id: number, type: string, mimeType: string, public pes: PESReader) {
         super(id, type, mimeType);
     }

@@ -1,16 +1,18 @@
-import BitReader from '../../../utils/bit-reader';
-import PayloadReader from './payload-reader';
-import Frame from '../../frame';
-import Track from '../../track';
+import { BitReader } from '../../../utils/bit-reader';
+import { PayloadReader } from './payload-reader';
+import { Frame } from '../../frame';
+import { Track } from '../../track';
 
-export default class AdtsReader extends PayloadReader {
+enum State {
+    FIND_SYNC = 1,
+    READ_HEADER = 2,
+    READ_FRAME = 3
+}
+
+export class AdtsReader extends PayloadReader {
     private static ADTS_HEADER_SIZE: number = 5;
     private static ADTS_SYNC_SIZE: number = 2;
     private static ADTS_CRC_SIZE: number = 2;
-
-    private static STATE_FIND_SYNC: number = 1;
-    private static STATE_READ_HEADER: number = 2;
-    private static STATE_READ_FRAME: number = 3;
 
     private static ADTS_SAMPLE_RATES: number[] = [96000, 88200, 64000, 48000,
         44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
@@ -20,7 +22,7 @@ export default class AdtsReader extends PayloadReader {
     public frameDuration: number;
     public currentFrameSize: number;
 
-    private state: number;
+    private state: State;
 
     constructor () {
         super();
@@ -28,7 +30,7 @@ export default class AdtsReader extends PayloadReader {
         this.sampleRate = 0;
         this.frameDuration = 0;
         this.currentFrameSize = 0;
-        this.state = AdtsReader.STATE_FIND_SYNC;
+        this.state = State.FIND_SYNC;
         this.dataOffset = 0;
     }
 
@@ -49,15 +51,15 @@ export default class AdtsReader extends PayloadReader {
         }
 
         while (this.dataOffset < this.dataBuffer.byteLength) {
-            if (this.state === AdtsReader.STATE_FIND_SYNC) {
+            if (this.state === State.FIND_SYNC) {
                 this.findNextSync();
-            } else if (this.state === AdtsReader.STATE_READ_HEADER) {
+            } else if (this.state === State.READ_HEADER) {
                 if (this.dataBuffer.byteLength - this.dataOffset < (AdtsReader.ADTS_HEADER_SIZE +
                     AdtsReader.ADTS_SYNC_SIZE)) {
                     break;
                 }
                 this.parseAACHeader();
-            } else if (this.state === AdtsReader.STATE_READ_FRAME) {
+            } else if (this.state === State.READ_FRAME) {
                 if ((this.dataBuffer.byteLength - this.dataOffset) < (AdtsReader.ADTS_SYNC_SIZE +
                     AdtsReader.ADTS_HEADER_SIZE + this.currentFrameSize)) {
                     break;
@@ -67,7 +69,7 @@ export default class AdtsReader extends PayloadReader {
 
                 this.dataOffset += (AdtsReader.ADTS_SYNC_SIZE + AdtsReader.ADTS_HEADER_SIZE +
                     this.currentFrameSize);
-                this.state = AdtsReader.STATE_FIND_SYNC;
+                this.state = State.FIND_SYNC;
             }
         }
 
@@ -82,7 +84,7 @@ export default class AdtsReader extends PayloadReader {
             if ((dataRead & 0xfff6) === 0xfff0) {
                 this.dataOffset = i;
                 if (this.dataOffset < this.dataBuffer.byteLength) {
-                    this.state = AdtsReader.STATE_READ_HEADER;
+                    this.state = State.READ_HEADER;
                 }
                 return;
             }
@@ -118,6 +120,6 @@ export default class AdtsReader extends PayloadReader {
             this.currentFrameSize -= AdtsReader.ADTS_CRC_SIZE;
         }
 
-        this.state = AdtsReader.STATE_READ_FRAME;
+        this.state = State.READ_FRAME;
     }
 }

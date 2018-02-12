@@ -1,9 +1,9 @@
-import BitReader from '../../../utils/bit-reader';
-import PayloadReader from './payload-reader';
-import Frame from '../../frame';
-import SPSParser from '../../../codecs/h264/sps-parser';
+import { BitReader } from '../../../utils/bit-reader';
+import { PayloadReader } from './payload-reader';
+import { Frame } from '../../frame';
+import { Track } from '../../track';
+import { SPSParser } from '../../../codecs/h264/sps-parser';
 import { Sps } from '../../../codecs/h264/nal-units';
-import Track from '../../track';
 
 enum NAL_UNIT_TYPE {
     SLICE = 1,
@@ -33,7 +33,7 @@ export class Fraction {
     }
 }
 
-export default class H264Reader extends PayloadReader {
+export class H264Reader extends PayloadReader {
     public sps: Sps;
     public pps: boolean;
     public pendingBytes: number;

@@ -1,9 +1,13 @@
-import Frame from './frame';
+import { Frame } from './frame';
 
-export default class Track {
+export class Track {
     public static TYPE_VIDEO: string = 'video';
     public static TYPE_AUDIO: string = 'audio';
     public static TYPE_TEXT: string = 'text';
+    public static TYPE_COMPLEX: string = 'complex';
+    public static TYPE_LOGO: string = 'logo';
+    public static TYPE_BUTTONS: string = 'buttons';
+    public static TYPE_CONTROL: string = 'control';
     public static TYPE_UNKNOWN: string = 'unknown';
 
     public static MIME_TYPE_AAC: string = 'audio/mp4a-latm';

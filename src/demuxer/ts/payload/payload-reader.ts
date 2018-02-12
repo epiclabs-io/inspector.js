@@ -1,8 +1,7 @@
-import BitReader from '../../../utils/bit-reader';
-import Frame from '../../frame';
-import { Sps } from '../../../codecs/h264/nal-units';
+import { BitReader } from '../../../utils/bit-reader';
+import { Frame } from '../../frame';
 
-export default class PayloadReader {
+export class PayloadReader {
     public firstTimestamp: number = -1;
     public timeUs: number = -1;
     public frames: Frame[] = [];

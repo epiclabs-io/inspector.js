@@ -1,5 +1,5 @@
 import ByteParserUtils from '../../../../utils/byte-parser-utils';
-import {Atom, ContainerAtom} from '../atom';
+import { Atom, ContainerAtom } from '../atom';
 
 export class AudioAtom extends ContainerAtom {
     public dataReferenceIndex: number;
