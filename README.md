@@ -2,11 +2,11 @@ Travis CI Status: [![Travis CI Status](https://travis-ci.org/epiclabs-io/inspect
 
 # Inspector.js #
 
-Javascript Library that implements MpegTS and MP4 demuxers.
+Javascript Library that implements MpegTS, MP4 and WebM demuxers.
 It also implements AVC (H.264), AAC and MP3 parsers that are used to inspect payload and to report the type of frames within each video/audio track. It doesn't decode content,
 just parse it, so inspection process is lightweight and can be done in real time for live streams without impacting CPU consumption.
 
-Besides other things it can be used to analyze the content of MpegTS or MP4 based streams (HLS/DASH/Smooth Streaming).
+Besides other things it can be used to analyze the content of MpegTS, MP4 or WebM based streams (HLS/DASH/Smooth Streaming).
 
 Note: Inspector.js can be used with web workers which allows to inspect big files without blocking UI. Take a look to our samples to see how to use it.
 
