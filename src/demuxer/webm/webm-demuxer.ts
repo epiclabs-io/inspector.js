@@ -153,6 +153,8 @@ export class WebMDemuxer implements IDemuxer {
             this.processTracksElement(element);
         } else if (element.name === 'Info') {
             this.segmentInfo = this.flatChilds(element);
+        } else if (element.name === 'Cluster') {
+            this.processCluster(element);
         }
     }
 
@@ -164,6 +166,23 @@ export class WebMDemuxer implements IDemuxer {
             const metadata: any = metadataEl ? this.flatChilds(metadataEl) : null;
             const track: WebMTrack = new WebMTrack(trackInfo, metadata);
             this.tracks[track.id] = track;
+        }
+    }
+
+    private processCluster(element: EbmlElement): void {
+        for (const child of element.childs) {
+            if (child.name === 'SimpleBlock' || child.name === 'Block') {
+                const trackId: Vint = EbmlParser.readVint(child.data as Uint8Array, 0);
+                if (this.tracks[trackId.value]) {
+                    (this.tracks[trackId.value] as WebMTrack).processBlock(trackId, child);
+                }
+            } else if (child.name === 'Timecode') {
+                for (const id in this.tracks) {
+                    if (this.tracks.hasOwnProperty(id)) {
+                        (this.tracks[id] as WebMTrack).setTimecode(child.data as number);
+                    }
+                }
+            }
         }
     }
 

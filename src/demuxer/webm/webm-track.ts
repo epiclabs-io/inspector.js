@@ -1,10 +1,13 @@
 import { Track } from '../track';
 import { Frame } from '../frame';
 import { ITrackInfo } from './elements/track-info';
+import { Vint, EbmlElement } from './ebml/ebml-types';
+import ByteParserUtils from '../../utils/byte-parser-utils';
 
 export class WebMTrack extends Track {
     private lastPts: number;
     private nsPerFrame: number;
+    private lastTimecodeBase: number;
     private timecodeScale: number;
     private codec: string;
     private metadata: any;
@@ -19,6 +22,7 @@ export class WebMTrack extends Track {
         this.metadata = metadata;
         this.lastPts = 0;
         this.nsPerFrame = info.DefaultDuration;
+        this.lastTimecodeBase = 0;
         this.timecodeScale = info.TrackTimecodeScale;
     }
 
@@ -84,6 +88,23 @@ export class WebMTrack extends Track {
             return {
                 sampleRate: this.metadata.SamplingFrequency
             };
+        }
+    }
+
+    public setTimecode(time: number): void {
+        this.lastTimecodeBase = time;
+    }
+
+    public processBlock(trackId: Vint, element: EbmlElement): void {
+        const buffer: Uint8Array = element.data as Uint8Array;
+        const timecode: number = ByteParserUtils.parseUint16(buffer, trackId.length);
+        const flags: number = ByteParserUtils.parseUint(buffer, trackId.length + 2, 1);
+        this.lastPts = 1000 * ((this.lastTimecodeBase + timecode) / (this.timecodeScale > 0 ? this.timecodeScale : 1));
+
+        if (element.name === 'SimpleBlock' && flags & 0x80) {
+            this.frames.push(new Frame(Frame.IDR_FRAME, this.lastPts, buffer.length));
+        } else {
+            this.frames.push(new Frame(Frame.P_FRAME, this.lastPts, buffer.length));
         }
     }
 }
