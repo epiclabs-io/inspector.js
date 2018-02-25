@@ -1,5 +1,5 @@
 import ByteParserUtils from '../../../utils/byte-parser-utils';
-import {Atom} from './atom';
+import { Atom } from './atom';
 
 export class Styp extends Atom {
     public majorBrand: string;

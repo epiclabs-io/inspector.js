@@ -1,5 +1,5 @@
 import ByteParserUtils from '../../../utils/byte-parser-utils';
-import {Atom} from './atom';
+import { Atom } from './atom';
 
 export class Tkhd extends Atom {
     public version: number;

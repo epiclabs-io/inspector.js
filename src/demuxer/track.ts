@@ -21,7 +21,6 @@ export class Track {
 
     public frames: Frame[];
     public duration: number;
-    public metadata: { [id: number] : Object };
 
     constructor(public id: number, public type: string, public mimeType: string) {
         this.frames = [];
@@ -45,6 +44,5 @@ export class Track {
         });
 
         this.duration = this.getDuration();
-        this.metadata = this.getMetadata();
     }
 }

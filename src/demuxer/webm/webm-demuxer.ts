@@ -159,7 +159,10 @@ export class WebMDemuxer implements IDemuxer {
     private processTracksElement(element: EbmlElement): void {
         for (const child of element.childs) {
             const trackInfo: ITrackInfo = this.flatChilds(child);
-            const track: WebMTrack = new WebMTrack(trackInfo);
+            const metadataEl: any = trackInfo.hasOwnProperty('Video') ? this.getChild(child, 'Video') :
+                trackInfo.hasOwnProperty('Audio') ? this.getChild(child, 'Audio') : null;
+            const metadata: any = metadataEl ? this.flatChilds(metadataEl) : null;
+            const track: WebMTrack = new WebMTrack(trackInfo, metadata);
             this.tracks[track.id] = track;
         }
     }
@@ -170,6 +173,18 @@ export class WebMDemuxer implements IDemuxer {
             obj[child.name] = child.data;
         }
         return obj;
+    }
+
+    private getChild(element: EbmlElement, name: string): EbmlElement {
+        if (!element.childs) {
+            return null;
+        }
+        for (const e of element.childs) {
+            if (e.name === name) {
+                return e;
+            }
+        }
+        return null;
     }
 
     private updateTracks(): void {

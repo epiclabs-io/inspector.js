@@ -1,5 +1,5 @@
 import ByteParserUtils from '../../../utils/byte-parser-utils';
-import {Atom} from './atom';
+import { Atom } from './atom';
 
 export class TimeToSampleEntry {
     constructor(public sampleCount: number, public sampleDelta: number) {

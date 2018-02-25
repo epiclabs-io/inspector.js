@@ -184,7 +184,7 @@ export class H264Reader extends PayloadReader {
         if (this.sps && this.pps) {
             this.addNewFrame(type, limit - start);
         } else {
-            console.warn('Slice ' + type + ' received without sps/pps been set');
+            // console.warn('Slice ' + type + ' received without sps/pps been set');
         }
         sliceParser.destroy();
         sliceParser = null;
