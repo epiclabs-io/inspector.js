@@ -1,5 +1,6 @@
 import { BitReader } from '../../utils/bit-reader';
-import { Sps, Size, FrameRate } from './nal-units';
+import { Sps } from './nal-units';
+import { Size, FrameRate } from '../video-types';
 
 export class SPSParser {
     public static parseSPS(data: Uint8Array): Sps {

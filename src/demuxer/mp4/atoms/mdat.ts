@@ -21,29 +21,7 @@ export class Mdat extends Atom {
             }
 
             const nalType: number = data[i] & 0x1F;
-            switch (nalType) {
-                case 0x01:
-                    console.log('slice_layer_without_partitioning_rbsp');
-                    break;
-                case 0x05:
-                    console.log('slice_layer_without_partitioning_rbsp_idr');
-                    break;
-                case 0x06:
-                    console.log('sei_rbsp');
-                    break;
-                case 0x07:
-                    console.log('seq_parameter_set_rbsp');
-                    break;
-                case 0x08:
-                    console.log('pic_parameter_set_rbsp');
-                    break;
-                case 0x09:
-                    console.log('access_unit_delimiter_rbsp');
-                    break;
-                default:
-                    console.log('Unknown nal unit: ' + nalType);
-                    break;
-            }
+            // TODO: do something
         }
     }
 }

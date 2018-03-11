@@ -1,5 +1,6 @@
 import ByteParserUtils from '../../../utils/byte-parser-utils';
 import { Atom, ContainerAtom } from './atom';
+import { NalUnit, NalUnitsArray } from '../../../codecs/h265/nal-unit';
 
 export class HvcC extends Atom {
     public version: number;
@@ -19,6 +20,7 @@ export class HvcC extends Atom {
     public numTemporalLayers: number;
     public temporalIdNested: number;
     public lengthSizeMinusOne: number;
+    public nalUnitsArrays: NalUnitsArray[];
 
     public static parse(data: Uint8Array): Atom {
         const hvcC: HvcC = new HvcC(Atom.hvcC, data.byteLength);
@@ -47,7 +49,29 @@ export class HvcC extends Atom {
         hvcC.temporalIdNested = (aux & 0X4) >> 2;
         hvcC.lengthSizeMinusOne = (aux & 0X3);
 
-        // TODO: read H265 nalus
+        hvcC.nalUnitsArrays = [];
+        const naluArraysCount: number = data[22];
+        let offset: number = 23;
+        for (let i: number = 0; i < naluArraysCount; i++) {
+            aux = data[offset++];
+            const completeness: number = (aux & 0x80) >> 7;
+            const naluType: number = (aux & 0x3f);
+            const nalusCount: number = ByteParserUtils.parseUint16(data, offset);
+            offset += 2;
+
+            const naluArray: NalUnitsArray = new NalUnitsArray(!!completeness, naluType);
+            hvcC.nalUnitsArrays.push(naluArray);
+            for (let j: number = 0; j < nalusCount; j++) {
+                const naluLen: number = ByteParserUtils.parseUint16(data, offset);
+                offset += 2;
+
+                const naluData: Uint8Array = data.subarray(offset, offset + naluLen);
+                offset += naluLen;
+
+                const nalu: NalUnit = new NalUnit(naluType, naluData);
+                naluArray.nalUnits.push(nalu);
+            }
+        }
 
         return hvcC;
     }

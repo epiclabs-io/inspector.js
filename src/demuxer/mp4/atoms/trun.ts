@@ -13,6 +13,10 @@ export class Sample {
     public duration: number;
     public size: number;
     public compositionTimeOffset: number;
+
+    public toString(): string {
+        return `[duration: ${this.duration}, size: ${this.size}]`;
+    }
 }
 
 export class Trun extends Atom {
