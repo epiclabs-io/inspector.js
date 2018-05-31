@@ -1,10 +1,30 @@
 import { MpegTSDemuxer } from './demuxer/ts/mpegts-demuxer';
 import { Mp4Demuxer } from './demuxer/mp4/mp4-demuxer';
 import { WebMDemuxer } from './demuxer/webm/webm-demuxer';
-import { IDemuxer } from './demuxer/demuxer';
+
+import { IDemuxer, TracksHash } from './demuxer/demuxer';
+import { Track } from './demuxer/track';
+import { Frame } from './demuxer/frame';
+
+import { Atom, ContainerAtom } from './demuxer/mp4/atoms/atom';
+
+import { FrameRate, Size } from './codecs/video-types';
+
 import { WebWorker } from './utils/web-worker';
 
-export function createMpegTSDemuxer(): MpegTSDemuxer {
+export type MpegTSDemuxer = MpegTSDemuxer;
+export type Mp4Demuxer = Mp4Demuxer;
+export type WebMDemuxer = WebMDemuxer;
+export type IDemuxer = IDemuxer;
+export type TracksHash = TracksHash;
+export type Track = Track;
+export type Frame = Frame;
+export type FrameRate = FrameRate;
+export type Size = Size;
+
+export type Atom = Atom;
+
+export function createMpegTSDemuxer(): MpegTSDemuxer { // Q: these methods should return IDemuxer to maintain abstraction solid?
     return new MpegTSDemuxer();
 }
 
