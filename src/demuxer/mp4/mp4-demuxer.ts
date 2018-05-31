@@ -1,6 +1,7 @@
 import ByteParserUtils from '../../utils/byte-parser-utils';
 import { boxesParsers } from './atoms';
 import { Atom, ContainerAtom } from './atoms/atom';
+import { Tfhd } from './atoms/tfhd';
 import { Track } from '../track';
 import { Mp4Track } from './mp4-track';
 import { Tkhd } from './atoms/tkhd';
@@ -17,6 +18,10 @@ export class Mp4Demuxer implements IDemuxer {
     constructor() {
         this.atoms = [];
         this.tracks = {};
+    }
+
+    public getAtoms(): Atom[] {
+      return this.atoms;
     }
 
     public append(data: Uint8Array): void {
@@ -75,6 +80,12 @@ export class Mp4Demuxer implements IDemuxer {
 
     private processAtom(atom: Atom): void {
         switch (atom.type) {
+
+            // FIXME !!! `trex` box can contain super based set of default sample-duration/flags/size ...
+            // (those are often repeated inside the tfhd when it is a fragmented file however, but still ... :)
+
+            // FIXME: much of this isn't going to work for plain old unfrag'd MP4 and MOV :)
+
             case Atom.tkhd:
                 this.lastTrackId = (atom as Tkhd).trackId;
                 break;
@@ -102,12 +113,22 @@ export class Mp4Demuxer implements IDemuxer {
 
             case Atom.sidx:
                 this.checkTrack();
-                (this.tracks[this.lastTrackId] as Mp4Track).setSidxAtom(atom);
+                this.getCurrentTrack().setSidxAtom(atom);
                 break;
 
             case Atom.trun:
                 this.checkTrack();
-                (this.tracks[this.lastTrackId] as Mp4Track).setTrunAtom(atom);
+                this.getCurrentTrack().addTrunAtom(atom);
+                break;
+
+            case Atom.tfhd:
+                this.checkTrack();
+                const tfhd: Tfhd = (<Tfhd> atom);
+                this.getCurrentTrack().setDefaults({
+                  sampleDuration: tfhd.defaultSampleDuration,
+                  sampleFlags: tfhd.defaultSampleFlags,
+                  sampleSize: tfhd.defaultSampleSize
+                });
                 break;
         }
     }
@@ -118,5 +139,9 @@ export class Mp4Demuxer implements IDemuxer {
             this.tracks[this.lastTrackId] = new Mp4Track(this.lastTrackId,
                 Track.TYPE_UNKNOWN, Track.MIME_TYPE_UNKNOWN, null);
         }
+    }
+
+    private getCurrentTrack(): Mp4Track {
+      return (this.tracks[this.lastTrackId] as Mp4Track);
     }
 }
