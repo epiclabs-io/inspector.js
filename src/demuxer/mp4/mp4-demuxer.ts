@@ -14,10 +14,13 @@ export class Mp4Demuxer implements IDemuxer {
     private data: Uint8Array;
     private atoms: Atom[];
     private lastTrackId: number;
+    private lastTrackDataOffset: number;
 
     constructor() {
         this.atoms = [];
         this.tracks = {};
+
+        this.resetLastTrackInfos();
     }
 
     public getAtoms(): Atom[] {
@@ -72,13 +75,13 @@ export class Mp4Demuxer implements IDemuxer {
                 (atom as ContainerAtom).atoms = this.parseAtoms(boxData, (atom as ContainerAtom).containerDataOffset);
             }
             atoms.push(atom);
-            this.processAtom(atom);
+            this.processAtom(atom, dataOffset);
             dataOffset = end;
         }
         return atoms;
     }
 
-    private processAtom(atom: Atom): void {
+    private processAtom(atom: Atom, dataOffset: number): void {
         switch (atom.type) {
 
             // FIXME !!! `trex` box can contain super based set of default sample-duration/flags/size ...
@@ -86,59 +89,102 @@ export class Mp4Demuxer implements IDemuxer {
 
             // FIXME: much of this isn't going to work for plain old unfrag'd MP4 and MOV :)
 
+            case Atom.ftyp:
+            case Atom.moov:
+            case Atom.moof:
+                this.lastTrackDataOffset = dataOffset;
+                break;
+
             case Atom.tkhd:
                 this.lastTrackId = (atom as Tkhd).trackId;
                 break;
 
             case Atom.avcC:
                 if (this.lastTrackId > 0) {
-                    this.tracks[this.lastTrackId] = new Mp4Track(this.lastTrackId,
-                        Track.TYPE_VIDEO, Track.MIME_TYPE_AVC, atom);
+                    this.tracks[this.lastTrackId] = new Mp4Track(
+                        this.lastTrackId,
+                        Track.TYPE_VIDEO,
+                        Track.MIME_TYPE_AVC,
+                        atom,
+                        this.lastTrackDataOffset
+                      );
+                    //this.resetLastTrackInfos();
                 }
                 break;
 
             case Atom.hvcC:
                 if (this.lastTrackId > 0) {
-                    this.tracks[this.lastTrackId] = new Mp4Track(this.lastTrackId,
-                        Track.TYPE_VIDEO, Track.MIME_TYPE_HEVC, atom);
+                    this.tracks[this.lastTrackId] = new Mp4Track(
+                        this.lastTrackId,
+                        Track.TYPE_VIDEO,
+                        Track.MIME_TYPE_HEVC,
+                        atom,
+                        this.lastTrackDataOffset
+                      );
+                    //this.resetLastTrackInfos();
                 }
                 break;
 
             case Atom.mp4a:
                 if (this.lastTrackId > 0) {
-                    this.tracks[this.lastTrackId] = new Mp4Track(this.lastTrackId,
-                        Track.TYPE_AUDIO, Track.MIME_TYPE_AAC, atom);
+                    this.tracks[this.lastTrackId] = new Mp4Track(
+                        this.lastTrackId,
+                        Track.TYPE_AUDIO,
+                        Track.MIME_TYPE_AAC,
+                        atom,
+                        this.lastTrackDataOffset
+                      );
+                    //this.resetLastTrackInfos();
                 }
                 break;
 
             case Atom.sidx:
-                this.checkTrack();
+                this.ensureTrack();
                 this.getCurrentTrack().setSidxAtom(atom);
                 break;
 
-            case Atom.trun:
-                this.checkTrack();
-                this.getCurrentTrack().addTrunAtom(atom);
-                break;
-
             case Atom.tfhd:
-                this.checkTrack();
+                this.ensureTrack();
                 const tfhd: Tfhd = (<Tfhd> atom);
+                this.getCurrentTrack().setBaseDataOffset(tfhd.baseDataOffset);
                 this.getCurrentTrack().setDefaults({
                   sampleDuration: tfhd.defaultSampleDuration,
                   sampleFlags: tfhd.defaultSampleFlags,
                   sampleSize: tfhd.defaultSampleSize
                 });
                 break;
+
+            case Atom.trun:
+                this.ensureTrack();
+                this.getCurrentTrack().updateSampleDataOffset(this.lastTrackDataOffset);
+                this.getCurrentTrack().addTrunAtom(atom);
+                break;
         }
     }
 
-    private checkTrack(): void {
-        if (this.lastTrackId === 0 || !this.tracks[this.lastTrackId]) {
+    /**
+     * Creates a track in case we haven't found a codec box
+     */
+    private ensureTrack(): void {
+        if (!this.lastTrackId || !this.tracks[this.lastTrackId]) {
             this.lastTrackId = 1;
-            this.tracks[this.lastTrackId] = new Mp4Track(this.lastTrackId,
-                Track.TYPE_UNKNOWN, Track.MIME_TYPE_UNKNOWN, null);
+            this.tracks[this.lastTrackId] = new Mp4Track(
+                this.lastTrackId,
+                Track.TYPE_UNKNOWN,
+                Track.MIME_TYPE_UNKNOWN,
+                null,
+                this.lastTrackDataOffset
+              );
+              //this.resetLastTrackInfos();
         }
+    }
+
+    /**
+     * should be called everytime we create a track
+     */
+    private resetLastTrackInfos() {
+        this.lastTrackId = 0;
+        this.lastTrackDataOffset = -1;
     }
 
     private getCurrentTrack(): Mp4Track {
