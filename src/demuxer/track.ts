@@ -1,6 +1,7 @@
-import { Frame } from './frame';
+import { Frame, MICROSECOND_TIMESCALE } from './frame';
 
 export class Track {
+    // FIXME: should be an enum type
     public static TYPE_VIDEO: string = 'video';
     public static TYPE_AUDIO: string = 'audio';
     public static TYPE_TEXT: string = 'text';
@@ -10,6 +11,7 @@ export class Track {
     public static TYPE_CONTROL: string = 'control';
     public static TYPE_UNKNOWN: string = 'unknown';
 
+    // Here we don't need an enum
     public static MIME_TYPE_AAC: string = 'audio/mp4a-latm';
     public static MIME_TYPE_AVC: string = 'video/avc';
     public static MIME_TYPE_HEVC: string = 'video/hevc';
@@ -19,22 +21,26 @@ export class Track {
     public static MIME_TYPE_ID3: string = 'application/id3';
     public static MIME_TYPE_UNKNOWN: string = 'unknown';
 
-    public frames: Frame[];
-    public duration: number;
+    protected frames: Frame[] = [];
+    protected duration: number = NaN;
 
-    constructor(public id: number, public type: string, public mimeType: string) {
+    constructor(public id: number, public type: string /* fixme: make enum type */, public mimeType: string) {
         this.frames = [];
     }
 
     public getFrames(): Frame[] {
-        return [];
+        return this.frames;
     }
 
     public getDuration(): number {
         return this.duration;
     }
 
-    public getMetadata(): {} {
+    public getDurationInSeconds(): number {
+        return this.getDuration() / MICROSECOND_TIMESCALE;
+    }
+
+    public getMetadata(): {} { // FIXME: Make this a string-to-any hash
         return {};
     }
 

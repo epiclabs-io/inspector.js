@@ -69,7 +69,9 @@ export class WebMTrack extends Track {
         return this.frames;
     }
 
-    public getMetadata(): any {
+    public getMetadata(): any { // FIXME: Seems this is the only implementation and it violates the base-class return-type
+                                // We should probably rather try to come up with a generic data-model
+                                // or at least type this as a string-to-any hash...
         if (!this.metadata) {
             return null;
         }

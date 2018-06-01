@@ -87,7 +87,6 @@ export class Trun extends Atom {
             }
             trun.samples.push(sample);
         }
-        console.log('total size: ' + totalSize);
         return trun;
     }
 

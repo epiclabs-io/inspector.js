@@ -4,6 +4,13 @@ import { Mp4Demuxer } from '../demuxer/mp4/mp4-demuxer';
 import { MpegTSDemuxer } from '../demuxer/ts/mpegts-demuxer';
 import { WebMDemuxer } from '../demuxer/webm/webm-demuxer';
 
+/**
+ * @see https://developer.mozilla.org/en-US/docs/Web/API/Worker/postMessage
+ */
+type WebWorkerPostMessageFunc = (message: any, transferList?: Array<any>) => void;
+
+declare const postMessage: WebWorkerPostMessageFunc;
+
 export class WebWorker {
     public static onMessage = ((event) => {
         if (event.data) {
