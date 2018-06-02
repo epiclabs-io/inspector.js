@@ -5,6 +5,7 @@ import { Tfhd } from './atoms/tfhd';
 import { Track } from '../track';
 import { Mp4Track } from './mp4-track';
 import { Tkhd } from './atoms/tkhd';
+import { Trun } from './atoms/trun';
 import { IDemuxer } from '../demuxer';
 import { Frame } from '../frame';
 
@@ -15,6 +16,7 @@ export class Mp4Demuxer implements IDemuxer {
     private atoms: Atom[];
     private lastTrackId: number;
     private lastTrackDataOffset: number;
+    private lastTrun: Trun;
 
     constructor() {
         this.atoms = [];
@@ -156,8 +158,12 @@ export class Mp4Demuxer implements IDemuxer {
 
             case Atom.trun:
                 this.ensureTrack();
-                this.getCurrentTrack().updateSampleDataOffset(this.lastTrackDataOffset);
                 this.getCurrentTrack().addTrunAtom(atom);
+                break;
+
+            case Atom.mdat:
+                this.getCurrentTrack().updateInitialSampleDataOffset(this.lastTrackDataOffset);
+                this.getCurrentTrack().readTrunAtoms();
                 break;
         }
     }
