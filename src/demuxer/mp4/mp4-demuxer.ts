@@ -5,7 +5,7 @@ import { Tfhd } from './atoms/tfhd';
 import { Track } from '../track';
 import { Mp4Track } from './mp4-track';
 import { Tkhd } from './atoms/tkhd';
-import { Trun } from './atoms/trun';
+import { Trun, SampleFlags } from './atoms/trun';
 import { IDemuxer } from '../demuxer';
 import { Frame } from '../frame';
 
@@ -179,7 +179,7 @@ export class Mp4Demuxer implements IDemuxer {
                 Track.TYPE_UNKNOWN,
                 Track.MIME_TYPE_UNKNOWN,
                 null,
-                this.lastTrackDataOffset
+                this.lastTrackDataOffset > 0 ? this.lastTrackDataOffset : 0
               );
               //this.resetLastTrackInfos();
         }
