@@ -3,7 +3,7 @@ import { Atom } from './atoms/atom';
 import { Frame, MICROSECOND_TIMESCALE } from '../frame';
 
 import { Sidx } from './atoms/sidx';
-import { Trun } from './atoms/trun';
+import { Trun, SampleFlags } from './atoms/trun';
 import { Tfhd } from './atoms/tfhd';
 
 export type Mp4TrackDefaults = {
@@ -19,6 +19,7 @@ export class Mp4Track extends Track {
     private lastPts: number;
     private timescale: number;
     private defaults: Mp4TrackDefaults;
+    private defaultSampleFlagsParsed: SampleFlags;
     private baseDataOffset: number = 0;
 
     constructor(id: number, type: string, mimeType: string, public referenceAtom: Atom, public dataOffset: number) {
@@ -53,6 +54,14 @@ export class Mp4Track extends Track {
 
     public setDefaults(defaults: Mp4TrackDefaults) {
         this.defaults = defaults;
+        if (defaults.sampleFlags) {
+            this.defaultSampleFlagsParsed = Trun.parseFlags(new Uint8Array([
+                defaults.sampleFlags & 0xff000000,
+                defaults.sampleFlags & 0x00ff0000,
+                defaults.sampleFlags & 0x0000ff00,
+                defaults.sampleFlags & 0x000000ff,
+            ]));
+        }
     }
 
     public getDefaults() {
@@ -123,16 +132,19 @@ export class Mp4Track extends Track {
 
                 const duration: number = MICROSECOND_TIMESCALE * sampleDuration / timescale;
 
-                const flags = sample.flags || this.defaults.sampleFlags;
+                const flags = sample.flags || this.defaultSampleFlagsParsed;
                 if (!flags) {
-                  throw new Error('Invalid file, sample has no flags');
+                  // in fact the trun box parser should provide a fallback instance of flags in this case
+                  //throw new Error('Invalid file, sample has no flags');
                 }
 
                 const cto: number =  MICROSECOND_TIMESCALE * (sample.compositionTimeOffset || 0) / timescale;
 
+                const timeUs = this.lastPts;
+
                 this.frames.push(new Frame(
-                  sample.flags.isSyncFrame ? Frame.IDR_FRAME : Frame.P_FRAME,
-                  this.lastPts,
+                  flags ? (flags.isSyncFrame ? Frame.IDR_FRAME : Frame.P_FRAME) : Frame.UNFLAGGED_FRAME,
+                  timeUs,
                   sample.size,
                   duration,
                   bytesOffset,
