@@ -38,6 +38,10 @@ export class Frame {
     }
 
     getDecodingTimestampInSeconds() {
-        return this.timeUs / MICROSECOND_TIMESCALE;
+        return this.getDecodingTimeUs() / MICROSECOND_TIMESCALE;
+    }
+
+    getDurationInSeconds() {
+        return this.duration / MICROSECOND_TIMESCALE;
     }
 }
