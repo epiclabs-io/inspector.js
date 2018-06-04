@@ -6,6 +6,7 @@ export class Frame {
     public static IDR_FRAME: string = 'I';
     public static P_FRAME: string = 'P';
     public static B_FRAME: string = 'B';
+    public static UNFLAGGED_FRAME: string = '-';
 
     private presentationTimeUs: number = 0;
 
