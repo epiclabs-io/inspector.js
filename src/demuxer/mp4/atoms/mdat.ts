@@ -16,8 +16,12 @@ export class Mdat extends Atom {
             i += 4;
 
             if (length <= 0) {
-                console.log('is this an H264 stream?');
-                continue;
+                //console.log('is this an H264 stream?');
+                //continue;
+
+                // let's break here since otherwise this crashes on AAC data
+                console.warn('aborted parsing mdat');
+                break;
             }
 
             const nalType: number = data[i] & 0x1F;
