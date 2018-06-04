@@ -90,7 +90,7 @@ export class Trun extends Atom {
         return trun;
     }
 
-    private static parseFlags(data: Uint8Array): SampleFlags {
+    static parseFlags(data: Uint8Array): SampleFlags {
         return new SampleFlags(
             (data[0] & 0x0c) >>> 2,
             (data[0] & 0x03),
