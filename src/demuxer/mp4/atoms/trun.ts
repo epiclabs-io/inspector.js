@@ -2,9 +2,15 @@ import ByteParserUtils from '../../../utils/byte-parser-utils';
 import { Atom } from './atom';
 
 export class SampleFlags {
-    constructor(public isLeading: number, public dependsOn: number, public isDependedOn: number,
-        public hasRedundancy: number, public paddingValue: number, public isSyncFrame: boolean,
-        public degradationPriority: number) {
+    constructor(
+        public isLeading: number,
+        public dependsOn: number,
+        public isDependedOn: number,
+        public hasRedundancy: number,
+        public paddingValue: number,
+        public isSyncFrame: boolean,
+        public degradationPriority: number
+      ) {
     }
 }
 
