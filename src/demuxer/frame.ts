@@ -15,7 +15,7 @@ export class Frame {
         public timeUs: number,
         public size: number,
         public duration: number = NaN,
-        public bytesOffset: number = -1,
+        public bytesOffset: number = NaN,
         presentationTimeOffsetUs: number = 0
     ) {
         this.setPresentationTimeOffsetUs(presentationTimeOffsetUs);
