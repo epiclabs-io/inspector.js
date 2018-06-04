@@ -21,6 +21,7 @@ const config = {
     // We target a UMD and name it MyLib. When including the bundle in the browser
     // it will be accessible at `window.MyLib`
     output: {
+        publicPath: '/',
         path: PATHS.bundles,
         filename: '[name].js',
         libraryTarget: 'umd',
