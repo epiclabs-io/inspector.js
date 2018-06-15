@@ -28,6 +28,24 @@ export class Track {
         this.frames = [];
     }
 
+    public isVideo() {
+        return this.type === Track.TYPE_VIDEO;
+    }
+
+    public isAudio() {
+        return this.type === Track.TYPE_AUDIO;
+    }
+
+    public isText() {
+        return this.type === Track.TYPE_TEXT;
+    }
+
+    public isOther() {
+        return this.type !== Track.TYPE_TEXT
+            && this.type !== Track.TYPE_AUDIO
+            && this.type !== Track.TYPE_VIDEO;
+    }
+
     public getFrames(): Frame[] {
         return this.frames;
     }
