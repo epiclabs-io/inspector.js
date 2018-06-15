@@ -1,10 +1,14 @@
 import { Track } from '../track';
 import { Atom } from './atoms/atom';
+import { AvcC } from './atoms/avcC'
 import { Frame, MICROSECOND_TIMESCALE } from '../frame';
 
 import { Sidx } from './atoms/sidx';
 import { Trun, SampleFlags } from './atoms/trun';
 import { Tfhd } from './atoms/tfhd';
+import { AudioAtom } from './atoms/helpers/audio-atom';
+import { VideoAtom } from './atoms/helpers/video-atom';
+import { Avc1 } from './atoms/avc1';
 
 export type Mp4TrackDefaults = {
   sampleDuration: number;
@@ -22,7 +26,12 @@ export class Mp4Track extends Track {
     private defaultSampleFlagsParsed: SampleFlags;
     private baseDataOffset: number = 0;
 
-    constructor(id: number, type: string, mimeType: string, public referenceAtom: Atom, public dataOffset: number) {
+    constructor(id: number,
+        type: string, mimeType: string,
+        public referenceAtom: Atom,
+        public metadataAtom: AudioAtom | VideoAtom,
+        public dataOffset: number) {
+
         super(id, type, mimeType);
         this.lastPts = 0;
         this.duration = 0;
@@ -30,6 +39,15 @@ export class Mp4Track extends Track {
         if (this.dataOffset < 0) {
           throw new Error('Invalid file, no sample-data base-offset can be determined');
         }
+    }
+
+    // TODO: make this abstract on Track class
+    public getResolution(): [number, number] {
+        if (!this.isVideo()) {
+            throw new Error('Can not get resolution of non-video track');
+        }
+        const avc1 = this.metadataAtom as Avc1;
+        return [avc1.width, avc1.height];
     }
 
     public getSegmentIndex(): Sidx {
@@ -42,6 +60,10 @@ export class Mp4Track extends Track {
 
     public getReferenceAtom(): Atom {
       return this.referenceAtom;
+    }
+
+    public getMetadataAtom(): VideoAtom | AudioAtom {
+        return this.metadataAtom;
     }
 
     public getLastPts(): number {
