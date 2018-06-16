@@ -14,10 +14,12 @@ export class AvcC extends Atom {
     public sps: Uint8Array[];
     public spsParsed: Sps[];
     public pps: Uint8Array[];
+    public data: Uint8Array;
 
     public static parse(data: Uint8Array): Atom {
         const avcC: AvcC = new AvcC(Atom.avcC, data.byteLength);
 
+        avcC.data = data;
         avcC.version = data[0];
         avcC.profile = data[1];
         avcC.profileCompatibility = data[2];
