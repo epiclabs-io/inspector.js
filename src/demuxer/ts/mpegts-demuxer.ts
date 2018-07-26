@@ -14,7 +14,7 @@ export class MpegTSDemuxer implements IDemuxer {
     private static MPEGTS_SYNC: number = 0x47;
     private static MPEGTS_PACKET_SIZE: number = 187;
 
-    public tracks: { [id: number] : Track; };
+    public tracks: { [id: number] : TSTrack; };
 
     private data: Uint8Array;
     private dataOffset: number;
