@@ -8,6 +8,7 @@ enum CONTAINER_TYPE {
     UNKNOWN = 1,
     MPEG_TS,
     RAW_AAC,
+    RAW_MPEG_AUDIO
 }
 
 export class MpegTSDemuxer implements IDemuxer {
