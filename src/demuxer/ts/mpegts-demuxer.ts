@@ -70,7 +70,7 @@ export class MpegTSDemuxer implements IDemuxer {
         if (this.containerType === CONTAINER_TYPE.MPEG_TS) {
             this.readHeader();
             this.readSamples();
-        } else {
+        } else { // FIXME: support raw mpeg audio
             const dataParser: BitReader = new BitReader(this.data);
             this.tracks[0] = new TSTrack(0, Track.TYPE_AUDIO, Track.MIME_TYPE_AAC,
                 new PESReader(0, PESReader.TS_STREAM_TYPE_AAC));
