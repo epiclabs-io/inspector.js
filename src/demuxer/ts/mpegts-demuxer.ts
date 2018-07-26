@@ -154,7 +154,7 @@ export class MpegTSDemuxer implements IDemuxer {
     private processTSPacket(packet: Uint8Array): void {
         this.packetsCount++;
 
-        let packetParser: BitReader = new BitReader(packet);
+        const packetParser: BitReader = new BitReader(packet);
         packetParser.skipBits(1);
 
         const payloadUnitStartIndicator: boolean = (packetParser.readBits(1) !== 0);
