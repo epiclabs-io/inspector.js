@@ -1,5 +1,5 @@
 import ByteParserUtils from '../../../utils/byte-parser-utils';
-import { Atom, ContainerAtom } from './atom';
+import { Atom } from './atom';
 import { SPSParser } from '../../../codecs/h264/sps-parser';
 import { Sps } from '../../../codecs/h264/nal-units';
 
