@@ -75,7 +75,7 @@ export class BitReader {
         return this.readBits(1) === 1;
     }
 
-    public readByte = function(): number {
+    public readByte(): number {
         return this.readBits(8);
     };
 
