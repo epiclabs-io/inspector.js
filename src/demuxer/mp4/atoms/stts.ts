@@ -9,7 +9,7 @@ export class TimeToSampleEntry {
 export class Stts extends Atom {
     public version: number;
     public flags: Uint8Array;
-    public timeToSamples: TimeToSampleEntry[];
+    public timeToSamples: TimeToSampleEntry[] = [];
 
     public static parse(data: Uint8Array): Atom {
         const stts: Stts = new Stts(Atom.stts, data.byteLength);

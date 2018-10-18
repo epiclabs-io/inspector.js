@@ -1,5 +1,8 @@
 import ByteParserUtils from '../../../utils/byte-parser-utils';
 import { Atom } from './atom';
+import {getLogger} from '../../../utils/logger';
+
+const {log, warn} = getLogger('Mdat');
 
 export class Mdat extends Atom {
 
@@ -20,7 +23,7 @@ export class Mdat extends Atom {
                 //continue;
 
                 // let's break here since otherwise this crashes on AAC data
-                console.warn('aborted parsing mdat');
+                warn('aborted parsing mdat');
                 break;
             }
 
