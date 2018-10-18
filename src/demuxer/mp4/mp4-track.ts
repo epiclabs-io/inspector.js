@@ -1,11 +1,9 @@
 import { Track } from '../track';
 import { Atom } from './atoms/atom';
-import { AvcC } from './atoms/avcC'
 import { Frame, MICROSECOND_TIMESCALE } from '../frame';
 
 import { Sidx } from './atoms/sidx';
 import { Trun, SampleFlags } from './atoms/trun';
-import { Tfhd } from './atoms/tfhd';
 import { AudioAtom } from './atoms/helpers/audio-atom';
 import { VideoAtom } from './atoms/helpers/video-atom';
 import { Avc1 } from './atoms/avc1';
@@ -20,17 +18,20 @@ export class Mp4Track extends Track {
     private sidx: Sidx = null;
     private trunInfo: Trun[] = [];
     private trunInfoReadIndex: number = 0;
-    private lastPts: number;
-    private timescale: number;
-    private defaults: Mp4TrackDefaults;
-    private defaultSampleFlagsParsed: SampleFlags;
+    private lastPts: number = null;
+    private timescale: number = null;
+    private defaults: Mp4TrackDefaults = null;
+    private defaultSampleFlagsParsed: SampleFlags = null;
     private baseDataOffset: number = 0;
 
-    constructor(id: number,
-        type: string, mimeType: string,
+    constructor(
+        id: number,
+        type: string,
+        mimeType: string,
         public referenceAtom: Atom,
         public metadataAtom: AudioAtom | VideoAtom,
-        public dataOffset: number) {
+        public dataOffset: number
+    ) {
 
         super(id, type, mimeType);
         this.lastPts = 0;
