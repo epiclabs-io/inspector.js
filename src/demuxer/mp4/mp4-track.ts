@@ -1,12 +1,19 @@
 import { Track } from '../track';
-import { Atom } from './atoms/atom';
+
 import { Frame, MICROSECOND_TIMESCALE } from '../frame';
+
+import { Atom } from './atoms/atom';
+
+import { AudioAtom } from './atoms/helpers/audio-atom';
+import { VideoAtom } from './atoms/helpers/video-atom';
 
 import { Sidx } from './atoms/sidx';
 import { Trun, SampleFlags } from './atoms/trun';
-import { AudioAtom } from './atoms/helpers/audio-atom';
-import { VideoAtom } from './atoms/helpers/video-atom';
 import { Avc1 } from './atoms/avc1';
+
+import {getLogger} from '../../utils/logger';
+
+const {log, warn} = getLogger('Mp4Track');
 
 export type Mp4TrackDefaults = {
   sampleDuration: number;

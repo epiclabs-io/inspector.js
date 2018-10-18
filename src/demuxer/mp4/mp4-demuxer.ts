@@ -1,20 +1,43 @@
 import ByteParserUtils from '../../utils/byte-parser-utils';
-import { boxesParsers } from './atoms';
-import { Atom, ContainerAtom } from './atoms/atom';
-import { Tfhd } from './atoms/tfhd';
+
 import { Track } from '../track';
 import { Mp4Track } from './mp4-track';
-import { Tkhd } from './atoms/tkhd';
-import { Trun } from './atoms/trun';
+
 import { IDemuxer, TracksHash } from '../demuxer';
+
 import { AudioAtom } from './atoms/helpers/audio-atom';
 import { VideoAtom } from './atoms/helpers/video-atom';
+
+import { boxesParsers } from './atoms';
+import { Atom, ContainerAtom } from './atoms/atom';
+
+import { Tfhd } from './atoms/tfhd';
+import { Tkhd } from './atoms/tkhd';
 import { AvcC } from './atoms/avcC';
 import { Hev1 } from './atoms/hev1';
+import { Stts } from './atoms/stts';
+import { Stsc } from './atoms/stsc';
+import { Stsz } from './atoms/stsz';
+import { Ctts } from './atoms/ctts';
+
+import {getLogger} from '../../utils/logger';
+import { Stss } from './atoms/stss';
+import { Stco } from './atoms/stco';
+
+const {log, warn} = getLogger('Mp4Demuxer');
+
+export class Mp4DemuxerSampleTable {
+    decodingTimestamps: Stts;
+    syncSamples: Stss;
+    compositionTimestampOffsets: Ctts;
+    chunks: Stsc;
+    sampleSizes: Stsz;
+    chunkOffsets: Stco
+};
 
 export class Mp4Demuxer implements IDemuxer {
     public tracks: TracksHash = {};
-    private data: Uint8Array = null;
+
     private atoms: Atom[] = [];
 
     // parsing stack
@@ -22,6 +45,7 @@ export class Mp4Demuxer implements IDemuxer {
     private lastTrackDataOffset: number;
     private lastAudioVideoAtom: AudioAtom | VideoAtom = null;
     private lastCodecDataAtom: AvcC | Hev1 = null;
+    private lastSampleTable: Mp4DemuxerSampleTable = null;
 
     constructor() {
         this.atoms = [];
@@ -53,9 +77,8 @@ export class Mp4Demuxer implements IDemuxer {
 
     private parseAtoms(data: Uint8Array, offset: number = 0): Atom[] {
         const atoms: Atom[] = [];
-        this.data = data;
-        let dataOffset: number = offset;
 
+        let dataOffset: number = offset;
         while (dataOffset < data.byteLength) {
             const size: number = ByteParserUtils.parseUint32(data, dataOffset);
             const type: string = ByteParserUtils.parseIsoBoxType(data, dataOffset + 4);
@@ -78,11 +101,14 @@ export class Mp4Demuxer implements IDemuxer {
                 }
             }
 
+            atoms.push(atom);
+
+            this.processAtom(atom, dataOffset);
+
             if (atom instanceof ContainerAtom) {
                 (atom as ContainerAtom).atoms = this.parseAtoms(boxData, (atom as ContainerAtom).containerDataOffset);
             }
-            atoms.push(atom);
-            this.processAtom(atom, dataOffset);
+
             dataOffset = end;
         }
         return atoms;
@@ -96,10 +122,11 @@ export class Mp4Demuxer implements IDemuxer {
 
             // FIXME: much of this isn't going to work for plain old unfrag'd MP4 and MOV :)
 
+            case Atom.trak:
+                this.lastSampleTable = null;
             case Atom.ftyp:
             case Atom.moov:
             case Atom.moof:
-            case Atom.trak:
                 this.lastTrackDataOffset = dataOffset;
                 break;
 
@@ -109,54 +136,27 @@ export class Mp4Demuxer implements IDemuxer {
 
             case Atom.hvcC:
                 this.lastCodecDataAtom = atom as Hev1;
+                this._attemptCreateTrack(Track.TYPE_VIDEO, Track.MIME_TYPE_HEVC, atom);
                 break;
             case Atom.avcC:
                 this.lastCodecDataAtom = atom as AvcC;
+                this._attemptCreateTrack(Track.TYPE_VIDEO, Track.MIME_TYPE_AVC, atom);
                 break;
 
             // H264
             case Atom.avc1:
                 this.lastAudioVideoAtom = atom as (AudioAtom | VideoAtom);
-                if (this.lastTrackId > 0) {
-                    console.log('new video track', this.lastCodecDataAtom)
-                    this.tracks[this.lastTrackId] = new Mp4Track(
-                        this.lastTrackId,
-                        Track.TYPE_VIDEO,
-                        Track.MIME_TYPE_AVC,
-                        this.lastCodecDataAtom,
-                        this.lastAudioVideoAtom,
-                        this.lastTrackDataOffset
-                    );
-                }
                 break;
+
             // H265
             case Atom.hev1:
                 this.lastAudioVideoAtom = atom as AudioAtom | VideoAtom;
-                if (this.lastTrackId > 0) {
-                    this.tracks[this.lastTrackId] = new Mp4Track(
-                        this.lastTrackId,
-                        Track.TYPE_VIDEO,
-                        Track.MIME_TYPE_HEVC,
-                        this.lastCodecDataAtom,
-                        this.lastAudioVideoAtom,
-                        this.lastTrackDataOffset
-                    );
-                }
                 break;
+
             // AAC
             case Atom.mp4a:
                 this.lastAudioVideoAtom = atom as AudioAtom | VideoAtom;
-                if (this.lastTrackId > 0) {
-                    console.log('new audio track')
-                    this.tracks[this.lastTrackId] = new Mp4Track(
-                        this.lastTrackId,
-                        Track.TYPE_AUDIO,
-                        Track.MIME_TYPE_AAC,
-                        atom,
-                        this.lastAudioVideoAtom,
-                        this.lastTrackDataOffset
-                      );
-                }
+                this._attemptCreateTrack(Track.TYPE_AUDIO, Track.MIME_TYPE_AAC, atom);
                 break;
 
             case Atom.sidx:
@@ -181,10 +181,47 @@ export class Mp4Demuxer implements IDemuxer {
                 break;
 
             case Atom.mdat:
-                this.ensureTrack();
-                this.getCurrentTrack().updateInitialSampleDataOffset(this.lastTrackDataOffset);
-                this.getCurrentTrack().readTrunAtoms();
+                // in plain old MOV the moov may be at the end of the file (and mdat before)
+                if (this.getCurrentTrack()) {
+                    this.getCurrentTrack().updateInitialSampleDataOffset(this.lastTrackDataOffset);
+                    this.getCurrentTrack().readTrunAtoms();
+                }
                 break;
+
+            case Atom.stbl:
+                if (this.lastSampleTable !== null) {
+                    throw new Error('Sample-table already existing, but should be null');
+                }
+                this.lastSampleTable = new Mp4DemuxerSampleTable();
+                break;
+            case Atom.stts:
+                this.lastSampleTable.decodingTimestamps = atom as Stts;
+                break;
+            case Atom.stss:
+                break;
+            case Atom.ctts:
+                break;
+            case Atom.stsc:
+                break;
+            case Atom.stsz:
+                break;
+            case Atom.stco:
+                break;
+        }
+
+    }
+
+    private _attemptCreateTrack(type: string, mime: string, ref: Atom) {
+        if (this.lastTrackId > 0) {
+            log('creating new track:', type, mime)
+            this.tracks[this.lastTrackId] = new Mp4Track(
+                this.lastTrackId,
+                type,
+                mime,
+                ref,
+                this.lastAudioVideoAtom,
+                this.lastTrackDataOffset
+              );
         }
     }
 
@@ -193,6 +230,7 @@ export class Mp4Demuxer implements IDemuxer {
      */
     private ensureTrack(): void {
         if (!this.lastTrackId || !this.tracks[this.lastTrackId]) {
+            warn('creating unknown-typed track');
             this.lastTrackId = 1;
             this.tracks[this.lastTrackId] = new Mp4Track(
                 this.lastTrackId,
