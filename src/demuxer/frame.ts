@@ -1,4 +1,4 @@
-export const MICROSECOND_TIMESCALE = 1000000;
+import { toSecondsFromMicros } from "../utils/timescale";
 
 export class Frame {
 
@@ -34,14 +34,14 @@ export class Frame {
     }
 
     getPresentationTimestampInSeconds(): number {
-        return this.getPresentationTimeUs() / MICROSECOND_TIMESCALE;
+        return toSecondsFromMicros(this.getPresentationTimeUs())
     }
 
     getDecodingTimestampInSeconds() {
-        return this.getDecodingTimeUs() / MICROSECOND_TIMESCALE;
+        return toSecondsFromMicros(this.getDecodingTimeUs());
     }
 
     getDurationInSeconds() {
-        return this.duration / MICROSECOND_TIMESCALE;
+        return toSecondsFromMicros(this.duration);
     }
 }

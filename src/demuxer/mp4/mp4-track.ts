@@ -1,6 +1,6 @@
 import { Track } from '../track';
 
-import { Frame, MICROSECOND_TIMESCALE } from '../frame';
+import { Frame } from '../frame';
 
 import { Atom } from './atoms/atom';
 
@@ -12,6 +12,7 @@ import { Trun, SampleFlags } from './atoms/trun';
 import { Avc1 } from './atoms/avc1';
 
 import {getLogger} from '../../utils/logger';
+import { toMicroseconds } from '../../utils/timescale';
 
 const {log, warn} = getLogger('Mp4Track');
 
@@ -80,6 +81,10 @@ export class Mp4Track extends Track {
 
     public getTimescale(): number {
         return this.timescale;
+    }
+
+    public setTimescale(timescale: number) {
+        this.timescale = timescale;
     }
 
     public setDefaults(defaults: Mp4TrackDefaults) {
@@ -167,7 +172,7 @@ export class Mp4Track extends Track {
                     throw new Error('Invalid file, samples have no duration');
                 }
 
-                const duration: number = MICROSECOND_TIMESCALE * sampleDuration / timescale;
+                const duration: number = toMicroseconds(sampleDuration, timescale);
 
                 const flags = sample.flags || this.defaultSampleFlagsParsed;
                 if (!flags) {
@@ -175,7 +180,7 @@ export class Mp4Track extends Track {
                   //throw new Error('Invalid file, sample has no flags');
                 }
 
-                const cto: number =  MICROSECOND_TIMESCALE * (sample.compositionTimeOffset || 0) / timescale;
+                const cto: number = toMicroseconds((sample.compositionTimeOffset || 0), timescale);
 
                 const timeUs = this.lastPts;
 

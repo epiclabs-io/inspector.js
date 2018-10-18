@@ -15,14 +15,17 @@ import { Tfhd } from './atoms/tfhd';
 import { Tkhd } from './atoms/tkhd';
 import { AvcC } from './atoms/avcC';
 import { Hev1 } from './atoms/hev1';
-import { Stts } from './atoms/stts';
-import { Stsc } from './atoms/stsc';
+import { Stts, TimeToSampleEntry } from './atoms/stts';
+import { Stsc, SampleToChunkEntry } from './atoms/stsc';
 import { Stsz } from './atoms/stsz';
-import { Ctts } from './atoms/ctts';
+import { Ctts, CTimeOffsetToSampleEntry } from './atoms/ctts';
 
 import {getLogger} from '../../utils/logger';
 import { Stss } from './atoms/stss';
 import { Stco } from './atoms/stco';
+import { Frame } from '../frame';
+import { Mdhd } from './atoms/mdhd';
+import { toMicroseconds } from '../../utils/timescale';
 
 const {log, warn} = getLogger('Mp4Demuxer');
 
@@ -30,8 +33,8 @@ export class Mp4DemuxerSampleTable {
     decodingTimestamps: Stts;
     syncSamples: Stss;
     compositionTimestampOffsets: Ctts;
-    chunks: Stsc;
     sampleSizes: Stsz;
+    chunks: Stsc;
     chunkOffsets: Stco
 
     constructor(private _track: Mp4Track) {
@@ -42,6 +45,50 @@ export class Mp4DemuxerSampleTable {
 
     digest() {
 
+        let dts = 0;
+        let frameCount = 0;
+
+        const frames: Frame[] = [];
+
+        this.decodingTimestamps.timeToSamples.forEach((entry: TimeToSampleEntry) => {
+
+            for (let i = 0; i < entry.sampleCount; i++) {
+
+                const isSyncFrame = this.syncSamples ? (this.syncSamples.syncSampleNumbers.indexOf(frameCount + 1) >= 0) : false;
+
+                frames.push(
+                    new Frame(
+                        isSyncFrame ? Frame.IDR_FRAME : Frame.P_FRAME,
+                        toMicroseconds(dts, this._track.getTimescale()),
+                        this.sampleSizes.sampleSize || this.sampleSizes.entries[frameCount],
+                        toMicroseconds(entry.sampleDelta, this._track.getTimescale())
+                    )
+                )
+
+                frameCount++;
+
+                dts += entry.sampleDelta;
+            }
+        });
+
+        frameCount = 0;
+
+        this.compositionTimestampOffsets && this.compositionTimestampOffsets.cTimeOffsetToSamples.forEach((entry: CTimeOffsetToSampleEntry) => {
+            for (let i = 0; i < entry.sampleCount; i++) {
+
+                frames[frameCount]
+                    .setPresentationTimeOffsetUs(toMicroseconds(entry.sampleCTimeOffset, this._track.getTimescale()));
+
+                frameCount++; // note: here we incr the count after using it as an ordinal index
+            }
+        });
+
+        this.chunks.sampleToChunks.forEach((entry: SampleToChunkEntry) => {
+            // TODO
+        })
+
+        // Finally, append all frames to our track
+        frames.forEach((frame) => this._track.appendFrame(frame));
     }
 };
 
@@ -50,12 +97,13 @@ export class Mp4Demuxer implements IDemuxer {
 
     private atoms: Atom[] = [];
 
-    // parsing stack
+    // track specific parsing stack
     private lastTrackId: number;
     private lastTrackDataOffset: number;
     private lastAudioVideoAtom: AudioAtom | VideoAtom = null;
     private lastCodecDataAtom: AvcC | Hev1 = null;
     private lastSampleTable: Mp4DemuxerSampleTable = null;
+    private lastTimescale: number = null;
 
     constructor() {
         this.atoms = [];
@@ -70,6 +118,10 @@ export class Mp4Demuxer implements IDemuxer {
 
     public append(data: Uint8Array): void {
         this.atoms = this._parseAtoms(data);
+
+        // "HACK" digest any last sample-table
+        this._digestSampleTable();
+
         this._updateTracks();
     }
 
@@ -121,6 +173,7 @@ export class Mp4Demuxer implements IDemuxer {
 
             dataOffset = end;
         }
+
         return atoms;
     }
 
@@ -130,14 +183,27 @@ export class Mp4Demuxer implements IDemuxer {
             // FIXME !!! `trex` box can contain super based set of default sample-duration/flags/size ...
             // (those are often repeated inside the tfhd when it is a fragmented file however, but still ... :)
 
-            // FIXME: much of this isn't going to work for plain old unfrag'd MP4 and MOV :)
-
             case Atom.trak:
-                this.lastSampleTable = null;
+
+                this._digestSampleTable();
+
+                this.lastTrackId = -1;
+                this.lastTimescale = null;
+                this.lastCodecDataAtom = null;
+                this.lastAudioVideoAtom = null;
+                this.lastTrackDataOffset = dataOffset;
+
             case Atom.ftyp:
             case Atom.moov:
             case Atom.moof:
-                this.lastTrackDataOffset = dataOffset;
+                 // FIXME
+                break;
+
+            // Moov box / "initialization"-data and SIDX
+
+            case Atom.sidx:
+                this._attemptCreateUnknownTrack();
+                this._getLastTrackCreated().setSidxAtom(atom);
                 break;
 
             case Atom.tkhd:
@@ -153,6 +219,8 @@ export class Mp4Demuxer implements IDemuxer {
                 this.lastCodecDataAtom = atom as AvcC;
                 this._attemptCreateTrack(Track.TYPE_VIDEO, Track.MIME_TYPE_AVC, atom);
                 break;
+
+            // Inside moov: Codec data -> create "known" tracks
 
             // H264
             case Atom.avc1:
@@ -170,14 +238,12 @@ export class Mp4Demuxer implements IDemuxer {
                 this._attemptCreateTrack(Track.TYPE_AUDIO, Track.MIME_TYPE_AAC, atom);
                 break;
 
-            case Atom.sidx:
-                this._attemptCreateUnknownTrack();
-                this._getLastTrackCreated().setSidxAtom(atom);
-                break;
+            // Fragmented-mode ...
 
             case Atom.tfhd:
+                // FIXME: should be handled differently by looking at other things inside fragments and mapping eventually to previously parsed moov
                 this._attemptCreateUnknownTrack();
-                const tfhd: Tfhd = (<Tfhd> atom);
+                const tfhd: Tfhd = atom as Tfhd;
                 this._getLastTrackCreated().setBaseDataOffset(tfhd.baseDataOffset);
                 this._getLastTrackCreated().setDefaults({
                   sampleDuration: tfhd.defaultSampleDuration,
@@ -187,16 +253,15 @@ export class Mp4Demuxer implements IDemuxer {
                 break;
 
             case Atom.trun:
+                // FIXME: should be handled differently by looking at other things inside fragments and mapping eventually to previously parsed moov
                 this._attemptCreateUnknownTrack();
                 this._getLastTrackCreated().addTrunAtom(atom);
                 break;
 
-            case Atom.mdat:
-                // in plain old MOV the moov may be at the end of the file (and mdat before)
-                if (this._getLastTrackCreated()) {
-                    this._getLastTrackCreated().updateInitialSampleDataOffset(this.lastTrackDataOffset);
-                    this._getLastTrackCreated().processTrunAtoms();
-                }
+            // Plain-old MOV ie unfragmented mode ...
+
+            case Atom.mdhd:
+                this.lastTimescale = (atom as Mdhd).timescale;
                 break;
 
             case Atom.stbl:
@@ -228,6 +293,16 @@ export class Mp4Demuxer implements IDemuxer {
                 this._haveSampleTable();
                 this.lastSampleTable.chunkOffsets = atom as Stco;
                 break;
+
+            // Sample data ...
+
+            case Atom.mdat:
+                // in plain old MOV the moov may be at the end of the file (and mdat before)
+                if (this._getLastTrackCreated()) {
+                    this._getLastTrackCreated().updateInitialSampleDataOffset(this.lastTrackDataOffset);
+                    this._getLastTrackCreated().processTrunAtoms();
+                }
+                break;
         }
     }
 
@@ -238,10 +313,18 @@ export class Mp4Demuxer implements IDemuxer {
         this.lastSampleTable = new Mp4DemuxerSampleTable(this._getLastTrackCreated());
     }
 
+
+    private _digestSampleTable() {
+        if (this.lastSampleTable) {
+            this.lastSampleTable.digest();
+            this.lastSampleTable = null;
+        }
+    }
+
     private _attemptCreateTrack(type: string, mime: string, ref: Atom) {
         if (this.lastTrackId > 0) {
             log('creating new track:', type, mime)
-            this.tracks[this.lastTrackId] = new Mp4Track(
+            const track = new Mp4Track(
                 this.lastTrackId,
                 type,
                 mime,
@@ -249,6 +332,10 @@ export class Mp4Demuxer implements IDemuxer {
                 this.lastAudioVideoAtom,
                 this.lastTrackDataOffset
               );
+            if (this.lastTimescale !== null) {
+                track.setTimescale(this.lastTimescale);
+            }
+            this.tracks[this.lastTrackId] = track;
         }
     }
 

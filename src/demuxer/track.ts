@@ -1,4 +1,5 @@
-import { Frame, MICROSECOND_TIMESCALE } from './frame';
+import { Frame } from './frame';
+import { toSecondsFromMicros } from '../utils/timescale';
 
 export class Track {
     // FIXME: should be an enum type
@@ -55,7 +56,7 @@ export class Track {
     }
 
     public getDurationInSeconds(): number {
-        return this.getDuration() / MICROSECOND_TIMESCALE;
+        return toSecondsFromMicros(this.getDuration());
     }
 
     public getMetadata(): {} { // FIXME: Make this a string-to-any hash
