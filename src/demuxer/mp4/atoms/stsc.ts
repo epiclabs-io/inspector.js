@@ -2,7 +2,9 @@ import ByteParserUtils from '../../../utils/byte-parser-utils';
 import { Atom } from './atom';
 
 export class SampleToChunkEntry {
-    constructor(public firstChunk: number, public samplesPerChunk: number,
+    constructor(
+        public firstChunk: number,
+        public samplesPerChunk: number,
         public sampleDescriptionIndex: number) {
     }
 }

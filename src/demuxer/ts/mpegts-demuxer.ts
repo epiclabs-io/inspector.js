@@ -8,13 +8,14 @@ enum CONTAINER_TYPE {
     UNKNOWN = 1,
     MPEG_TS,
     RAW_AAC,
+    RAW_MPEG_AUDIO
 }
 
 export class MpegTSDemuxer implements IDemuxer {
     private static MPEGTS_SYNC: number = 0x47;
     private static MPEGTS_PACKET_SIZE: number = 187;
 
-    public tracks: { [id: number] : Track; };
+    public tracks: { [id: number] : TSTrack; };
 
     private data: Uint8Array;
     private dataOffset: number;
@@ -69,7 +70,7 @@ export class MpegTSDemuxer implements IDemuxer {
         if (this.containerType === CONTAINER_TYPE.MPEG_TS) {
             this.readHeader();
             this.readSamples();
-        } else {
+        } else { // FIXME: support raw mpeg audio
             const dataParser: BitReader = new BitReader(this.data);
             this.tracks[0] = new TSTrack(0, Track.TYPE_AUDIO, Track.MIME_TYPE_AAC,
                 new PESReader(0, PESReader.TS_STREAM_TYPE_AAC));
@@ -153,7 +154,7 @@ export class MpegTSDemuxer implements IDemuxer {
     private processTSPacket(packet: Uint8Array): void {
         this.packetsCount++;
 
-        let packetParser: BitReader = new BitReader(packet);
+        const packetParser: BitReader = new BitReader(packet);
         packetParser.skipBits(1);
 
         const payloadUnitStartIndicator: boolean = (packetParser.readBits(1) !== 0);

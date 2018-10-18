@@ -1,4 +1,4 @@
-export const MICROSECOND_TIMESCALE = 1000000;
+import { toSecondsFromMicros } from "../utils/timescale";
 
 export class Frame {
 
@@ -6,6 +6,7 @@ export class Frame {
     public static IDR_FRAME: string = 'I';
     public static P_FRAME: string = 'P';
     public static B_FRAME: string = 'B';
+    public static UNFLAGGED_FRAME: string = '-';
 
     private presentationTimeUs: number = 0;
 
@@ -14,7 +15,7 @@ export class Frame {
         public timeUs: number,
         public size: number,
         public duration: number = NaN,
-        public bytesOffset: number = -1,
+        public bytesOffset: number = NaN,
         presentationTimeOffsetUs: number = 0
     ) {
         this.setPresentationTimeOffsetUs(presentationTimeOffsetUs);
@@ -33,10 +34,14 @@ export class Frame {
     }
 
     getPresentationTimestampInSeconds(): number {
-        return this.getPresentationTimeUs() / MICROSECOND_TIMESCALE;
+        return toSecondsFromMicros(this.getPresentationTimeUs())
     }
 
     getDecodingTimestampInSeconds() {
-        return this.timeUs / MICROSECOND_TIMESCALE;
+        return toSecondsFromMicros(this.getDecodingTimeUs());
+    }
+
+    getDurationInSeconds() {
+        return toSecondsFromMicros(this.duration);
     }
 }

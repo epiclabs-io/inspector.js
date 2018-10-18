@@ -1,10 +1,20 @@
 import { Track } from '../track';
+
+import { Frame } from '../frame';
+
 import { Atom } from './atoms/atom';
-import { Frame, MICROSECOND_TIMESCALE } from '../frame';
+
+import { AudioAtom } from './atoms/helpers/audio-atom';
+import { VideoAtom } from './atoms/helpers/video-atom';
 
 import { Sidx } from './atoms/sidx';
-import { Trun } from './atoms/trun';
-import { Tfhd } from './atoms/tfhd';
+import { Trun, SampleFlags } from './atoms/trun';
+import { Avc1 } from './atoms/avc1';
+
+import {getLogger} from '../../utils/logger';
+import { toMicroseconds } from '../../utils/timescale';
+
+const {log, warn} = getLogger('Mp4Track');
 
 export type Mp4TrackDefaults = {
   sampleDuration: number;
@@ -15,12 +25,22 @@ export type Mp4TrackDefaults = {
 export class Mp4Track extends Track {
     private sidx: Sidx = null;
     private trunInfo: Trun[] = [];
-    private lastPts: number;
-    private timescale: number;
-    private defaults: Mp4TrackDefaults;
+    private trunInfoReadIndex: number = 0;
+    private lastPts: number = null;
+    private timescale: number = null;
+    private defaults: Mp4TrackDefaults = null;
+    private defaultSampleFlagsParsed: SampleFlags = null;
     private baseDataOffset: number = 0;
 
-    constructor(id: number, type: string, mimeType: string, public referenceAtom: Atom, public dataOffset: number) {
+    constructor(
+        id: number,
+        type: string,
+        mimeType: string,
+        public referenceAtom: Atom,
+        public metadataAtom: AudioAtom | VideoAtom,
+        public dataOffset: number
+    ) {
+
         super(id, type, mimeType);
         this.lastPts = 0;
         this.duration = 0;
@@ -28,6 +48,15 @@ export class Mp4Track extends Track {
         if (this.dataOffset < 0) {
           throw new Error('Invalid file, no sample-data base-offset can be determined');
         }
+    }
+
+    // TODO: make this abstract on Track class
+    public getResolution(): [number, number] {
+        if (!this.isVideo()) {
+            throw new Error('Can not get resolution of non-video track');
+        }
+        const avc1 = this.metadataAtom as Avc1;
+        return [avc1.width, avc1.height];
     }
 
     public getSegmentIndex(): Sidx {
@@ -42,6 +71,10 @@ export class Mp4Track extends Track {
       return this.referenceAtom;
     }
 
+    public getMetadataAtom(): VideoAtom | AudioAtom {
+        return this.metadataAtom;
+    }
+
     public getLastPts(): number {
       return this.lastPts;
     }
@@ -50,8 +83,20 @@ export class Mp4Track extends Track {
         return this.timescale;
     }
 
+    public setTimescale(timescale: number) {
+        this.timescale = timescale;
+    }
+
     public setDefaults(defaults: Mp4TrackDefaults) {
         this.defaults = defaults;
+        if (defaults.sampleFlags) {
+            this.defaultSampleFlagsParsed = Trun.parseFlags(new Uint8Array([
+                defaults.sampleFlags & 0xff000000,
+                defaults.sampleFlags & 0x00ff0000,
+                defaults.sampleFlags & 0x0000ff00,
+                defaults.sampleFlags & 0x000000ff,
+            ]));
+        }
     }
 
     public getDefaults() {
@@ -74,7 +119,7 @@ export class Mp4Track extends Track {
      * Not to be confused with the base offset which maybe be present for each track fragment inside the `tfhd`.
      * That value will be shared for each `trun`.
      */
-    public updateSampleDataOffset(dataOffset: number) {
+    public updateInitialSampleDataOffset(dataOffset: number) {
         this.dataOffset = dataOffset;
     }
 
@@ -85,8 +130,8 @@ export class Mp4Track extends Track {
      * Each trun box has it's own offset, which refers to this offset here in order to resolve the absolute position
      * of sample runs.
      */
-    public getSampleDataOffset(): number {
-        return this.baseDataOffset + this.dataOffset;
+    public getFinalSampleDataOffset(): number {
+        return this.dataOffset + this.baseDataOffset;
     }
 
     public setSidxAtom(atom: Atom): void {
@@ -95,45 +140,63 @@ export class Mp4Track extends Track {
         this.timescale = this.sidx.timescale;
     }
 
+    public appendFrame(frame: Frame) {
+        this.lastPts += frame.duration;
+        this.duration += frame.duration;
+        this.frames.push(frame);
+    }
+
+    // TODO: move the truns array and processTrunAtoms to a own container class (like sample-table)
     public addTrunAtom(atom: Atom): void {
         const trun = atom as Trun;
 
         this.trunInfo.push(trun);
+    }
 
-        const timescale: number = this.sidx ? this.sidx.timescale : 1;
+    public processTrunAtoms() {
+        this.trunInfo.forEach((trun: Trun, index) => {
 
-        const sampleRunDataOffset: number = trun.dataOffset + this.getSampleDataOffset();
-
-        let bytesOffset: number = sampleRunDataOffset;
-
-        for (const sample of trun.samples) {
-            const sampleDuration = sample.duration || this.defaults.sampleDuration;
-            if (!sampleDuration) {
-                throw new Error('Invalid file, samples have no duration');
+            if (index < this.trunInfoReadIndex) {
+              return;
             }
 
-            const duration: number = MICROSECOND_TIMESCALE * sampleDuration / timescale;
+            const timescale: number = this.sidx ? this.sidx.timescale : 1;
 
-            this.lastPts += duration;
-            this.duration += duration;
+            const sampleRunDataOffset: number = trun.dataOffset + this.getFinalSampleDataOffset();
 
-            const flags = sample.flags || this.defaults.sampleFlags;
-            if (!flags) {
-              throw new Error('Invalid file, sample has no flags');
+            let bytesOffset: number = sampleRunDataOffset;
+
+            for (const sample of trun.samples) {
+                const sampleDuration = sample.duration || this.defaults.sampleDuration;
+                if (!sampleDuration) {
+                    throw new Error('Invalid file, samples have no duration');
+                }
+
+                const duration: number = toMicroseconds(sampleDuration, timescale);
+
+                const flags = sample.flags || this.defaultSampleFlagsParsed;
+                if (!flags) {
+                  // in fact the trun box parser should provide a fallback instance of flags in this case
+                  //throw new Error('Invalid file, sample has no flags');
+                }
+
+                const cto: number = toMicroseconds((sample.compositionTimeOffset || 0), timescale);
+
+                const timeUs = this.lastPts;
+
+                this.appendFrame(new Frame(
+                  flags ? (flags.isSyncFrame ? Frame.IDR_FRAME : Frame.P_FRAME) : Frame.UNFLAGGED_FRAME,
+                  timeUs,
+                  sample.size,
+                  duration,
+                  bytesOffset,
+                  cto
+                ));
+
+                bytesOffset += sample.size;
             }
+        })
 
-            const cto: number =  MICROSECOND_TIMESCALE * (sample.compositionTimeOffset || 0) / timescale;
-
-            this.frames.push(new Frame(
-              sample.flags.isSyncFrame ? Frame.IDR_FRAME : Frame.P_FRAME,
-              this.lastPts,
-              sample.size,
-              duration,
-              bytesOffset,
-              cto
-            ));
-
-            bytesOffset += sample.size;
-        }
+        this.trunInfoReadIndex = this.trunInfo.length;
     }
 }

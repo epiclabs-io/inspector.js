@@ -2,6 +2,8 @@ import { MpegTSDemuxer } from './demuxer/ts/mpegts-demuxer';
 import { Mp4Demuxer } from './demuxer/mp4/mp4-demuxer';
 import { WebMDemuxer } from './demuxer/webm/webm-demuxer';
 
+import { TSTrack } from './demuxer/ts/ts-track';
+
 import { IDemuxer, TracksHash } from './demuxer/demuxer';
 import { Track } from './demuxer/track';
 import { Frame } from './demuxer/frame';
@@ -13,6 +15,7 @@ import { FrameRate, Size } from './codecs/video-types';
 import { WebWorker } from './utils/web-worker';
 
 export type MpegTSDemuxer = MpegTSDemuxer;
+export type TSTrack = TSTrack;
 export type Mp4Demuxer = Mp4Demuxer;
 export type WebMDemuxer = WebMDemuxer;
 export type IDemuxer = IDemuxer;

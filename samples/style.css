@@ -1,0 +1,61 @@
+body {
+  font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif
+}
+
+input {
+  font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif
+}
+
+input[type=button] {
+  font-size: 1em;
+  background-color: #94bf1e;
+}
+
+input[type=file] {
+  font-size: 1em;
+  border: 1px solid gray;
+}
+
+input[type=input] {
+  font-size: 1em;
+}
+
+#viewer {
+  width: 100%;
+  overflow-x: auto;
+  position: relative;
+  scroll-behavior: auto;
+}
+
+#atoms-info {
+  margin-top: 40px;
+  background-color: #94bf1e;
+  color: #ffffff;
+  border: 1px solid black;
+  display: flex;
+  float:left;
+  /*width: 50%;*/
+}
+
+.atom_column {
+  flex: 50%;
+}
+
+#atoms li {
+  cursor: pointer;
+}
+
+#details {
+  background-color: #000000;
+}
+
+#tracks {
+  float:right;
+  /*width: 50%;*/
+  margin-top: 20px;
+}
+
+#tracks li {
+  font-size: 0.8em;
+}
+
