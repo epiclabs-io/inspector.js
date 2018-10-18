@@ -135,13 +135,20 @@ export class Mp4Track extends Track {
         this.timescale = this.sidx.timescale;
     }
 
+    public appendFrame(frame: Frame) {
+        this.lastPts += frame.duration;
+        this.duration += frame.duration;
+        this.frames.push(frame);
+    }
+
+    // TODO: move the truns array and processTrunAtoms to a own container class (like sample-table)
     public addTrunAtom(atom: Atom): void {
         const trun = atom as Trun;
 
         this.trunInfo.push(trun);
     }
 
-    public readTrunAtoms() {
+    public processTrunAtoms() {
         this.trunInfo.forEach((trun: Trun, index) => {
 
             if (index < this.trunInfoReadIndex) {
@@ -172,7 +179,7 @@ export class Mp4Track extends Track {
 
                 const timeUs = this.lastPts;
 
-                this.frames.push(new Frame(
+                this.appendFrame(new Frame(
                   flags ? (flags.isSyncFrame ? Frame.IDR_FRAME : Frame.P_FRAME) : Frame.UNFLAGGED_FRAME,
                   timeUs,
                   sample.size,
@@ -180,9 +187,6 @@ export class Mp4Track extends Track {
                   bytesOffset,
                   cto
                 ));
-
-                this.lastPts += duration;
-                this.duration += duration;
 
                 bytesOffset += sample.size;
             }
