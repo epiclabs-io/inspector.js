@@ -19,7 +19,6 @@ import { Stts } from './atoms/stts';
 import { Stsc } from './atoms/stsc';
 import { Stsz } from './atoms/stsz';
 import { Ctts } from './atoms/ctts';
-
 import { Stss } from './atoms/stss';
 import { Stco } from './atoms/stco';
 import { Mdhd } from './atoms/mdhd';
@@ -28,7 +27,7 @@ import {getLogger} from '../../utils/logger';
 
 import { Mp4SampleTable } from './mp4-sample-table';
 
-const {log, debug, warn} = getLogger('Mp4Demuxer');
+const {log, warn} = getLogger('Mp4Demuxer');
 
 export class Mp4Demuxer implements IDemuxer {
     public tracks: TracksHash = {};
@@ -124,17 +123,17 @@ export class Mp4Demuxer implements IDemuxer {
             case Atom.trak:
 
                 this._digestSampleTable();
-
                 this.lastTrackId = -1;
                 this.lastTimescale = null;
                 this.lastCodecDataAtom = null;
                 this.lastAudioVideoAtom = null;
-                this.lastTrackDataOffset = dataOffset;
 
             case Atom.ftyp:
             case Atom.moov:
             case Atom.moof:
-                 // FIXME
+                // (only) needed for fragmented mode
+                this.lastTrackDataOffset = dataOffset;
+            // FIXME
                 break;
 
             // Moov box / "initialization"-data and SIDX
@@ -237,7 +236,9 @@ export class Mp4Demuxer implements IDemuxer {
             case Atom.mdat:
                 // in plain old MOV the moov may be at the end of the file (and mdat before)
                 if (this._getLastTrackCreated()) {
+                    log('updating sample-data offset:', this.lastTrackDataOffset)
                     this._getLastTrackCreated().updateInitialSampleDataOffset(this.lastTrackDataOffset);
+                    log('processing current track-run');
                     this._getLastTrackCreated().processTrunAtoms();
                 }
                 break;
@@ -296,7 +297,7 @@ export class Mp4Demuxer implements IDemuxer {
     }
 
     /**
-     * should be called everytime we create a track
+     * Should be called everytime we create a track
      */
     private _resetLastTrackInfos() {
         this.lastTrackId = 0;

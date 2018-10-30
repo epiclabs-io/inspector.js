@@ -14,7 +14,7 @@ import { Avc1 } from './atoms/avc1';
 import {getLogger} from '../../utils/logger';
 import { toMicroseconds } from '../../utils/timescale';
 
-const {log, warn} = getLogger('Mp4Track');
+const {log, debug, warn} = getLogger('Mp4Track');
 
 export type Mp4TrackDefaults = {
   sampleDuration: number;
@@ -184,14 +184,18 @@ export class Mp4Track extends Track {
 
                 const timeUs = this.lastPts;
 
-                this.appendFrame(new Frame(
-                  flags ? (flags.isSyncFrame ? Frame.IDR_FRAME : Frame.P_FRAME) : Frame.UNFLAGGED_FRAME,
-                  timeUs,
-                  sample.size,
-                  duration,
-                  bytesOffset,
-                  cto
-                ));
+                const newFrame = new Frame(
+                    flags ? (flags.isSyncFrame ? Frame.IDR_FRAME : Frame.P_FRAME) : Frame.UNFLAGGED_FRAME,
+                    timeUs,
+                    sample.size,
+                    duration,
+                    bytesOffset,
+                    cto
+                );
+
+                this.appendFrame(newFrame);
+
+                debug(`frame: ${newFrame.timeUs} -> ${newFrame.bytesOffset} / ${newFrame.size}`, newFrame)
 
                 bytesOffset += sample.size;
             }
