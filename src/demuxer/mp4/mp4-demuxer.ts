@@ -133,7 +133,7 @@ export class Mp4Demuxer implements IDemuxer {
             case Atom.moof:
                 // (only) needed for fragmented mode
                 this.lastTrackDataOffset = dataOffset;
-            // FIXME
+
                 break;
 
             // Moov box / "initialization"-data and SIDX
