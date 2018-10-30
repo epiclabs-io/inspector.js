@@ -15,82 +15,20 @@ import { Tfhd } from './atoms/tfhd';
 import { Tkhd } from './atoms/tkhd';
 import { AvcC } from './atoms/avcC';
 import { Hev1 } from './atoms/hev1';
-import { Stts, TimeToSampleEntry } from './atoms/stts';
-import { Stsc, SampleToChunkEntry } from './atoms/stsc';
+import { Stts } from './atoms/stts';
+import { Stsc } from './atoms/stsc';
 import { Stsz } from './atoms/stsz';
-import { Ctts, CTimeOffsetToSampleEntry } from './atoms/ctts';
+import { Ctts } from './atoms/ctts';
 
-import {getLogger} from '../../utils/logger';
 import { Stss } from './atoms/stss';
 import { Stco } from './atoms/stco';
-import { Frame } from '../frame';
 import { Mdhd } from './atoms/mdhd';
-import { toMicroseconds } from '../../utils/timescale';
 
-const {log, warn} = getLogger('Mp4Demuxer');
+import {getLogger} from '../../utils/logger';
 
-export class Mp4DemuxerSampleTable {
-    decodingTimestamps: Stts;
-    syncSamples: Stss;
-    compositionTimestampOffsets: Ctts;
-    sampleSizes: Stsz;
-    chunks: Stsc;
-    chunkOffsets: Stco
+import { Mp4SampleTable } from './mp4-sample-table';
 
-    constructor(private _track: Mp4Track) {
-        if (!_track) {
-            throw new Error('Sample-table can not be created without a Track');
-        }
-    }
-
-    digest() {
-
-        let dts = 0;
-        let frameCount = 0;
-
-        const frames: Frame[] = [];
-
-        this.decodingTimestamps.timeToSamples.forEach((entry: TimeToSampleEntry) => {
-
-            for (let i = 0; i < entry.sampleCount; i++) {
-
-                const isSyncFrame = this.syncSamples ? (this.syncSamples.syncSampleNumbers.indexOf(frameCount + 1) >= 0) : false;
-
-                frames.push(
-                    new Frame(
-                        isSyncFrame ? Frame.IDR_FRAME : Frame.P_FRAME,
-                        toMicroseconds(dts, this._track.getTimescale()),
-                        this.sampleSizes.sampleSize || this.sampleSizes.entries[frameCount],
-                        toMicroseconds(entry.sampleDelta, this._track.getTimescale())
-                    )
-                )
-
-                frameCount++;
-
-                dts += entry.sampleDelta;
-            }
-        });
-
-        frameCount = 0;
-
-        this.compositionTimestampOffsets && this.compositionTimestampOffsets.cTimeOffsetToSamples.forEach((entry: CTimeOffsetToSampleEntry) => {
-            for (let i = 0; i < entry.sampleCount; i++) {
-
-                frames[frameCount]
-                    .setPresentationTimeOffsetUs(toMicroseconds(entry.sampleCTimeOffset, this._track.getTimescale()));
-
-                frameCount++; // note: here we incr the count after using it as an ordinal index
-            }
-        });
-
-        this.chunks.sampleToChunks.forEach((entry: SampleToChunkEntry) => {
-            // TODO
-        })
-
-        // Finally, append all frames to our track
-        frames.forEach((frame) => this._track.appendFrame(frame));
-    }
-};
+const {log, debug, warn} = getLogger('Mp4Demuxer');
 
 export class Mp4Demuxer implements IDemuxer {
     public tracks: TracksHash = {};
@@ -102,7 +40,7 @@ export class Mp4Demuxer implements IDemuxer {
     private lastTrackDataOffset: number;
     private lastAudioVideoAtom: AudioAtom | VideoAtom = null;
     private lastCodecDataAtom: AvcC | Hev1 = null;
-    private lastSampleTable: Mp4DemuxerSampleTable = null;
+    private lastSampleTable: Mp4SampleTable = null;
     private lastTimescale: number = null;
 
     constructor() {
@@ -283,7 +221,7 @@ export class Mp4Demuxer implements IDemuxer {
                 break;
             case Atom.stsc:
                 this._haveSampleTable();
-                this.lastSampleTable.chunks = atom as Stsc;
+                this.lastSampleTable.samplesToChunkBox = atom as Stsc;
                 break;
             case Atom.stsz:
                 this._haveSampleTable();
@@ -291,7 +229,7 @@ export class Mp4Demuxer implements IDemuxer {
                 break;
             case Atom.stco:
                 this._haveSampleTable();
-                this.lastSampleTable.chunkOffsets = atom as Stco;
+                this.lastSampleTable.chunkOffsetBox = atom as Stco;
                 break;
 
             // Sample data ...
@@ -310,7 +248,7 @@ export class Mp4Demuxer implements IDemuxer {
         if (this.lastSampleTable) {
             return;
         }
-        this.lastSampleTable = new Mp4DemuxerSampleTable(this._getLastTrackCreated());
+        this.lastSampleTable = new Mp4SampleTable(this._getLastTrackCreated());
     }
 
 

@@ -1,12 +1,5 @@
-export class Mp4SampleFlags {
-    public isLeading: number;
-    public dependsOn: number;
-    public isDependedOn: number;
-    public hasRedundancy: number;
-    public paddingValue: number;
-    public isNonSyncSample: number;
-    public degradationPriority: number;
-}
+import { Mp4SampleFlags } from "../demuxer/mp4/mp4-sample-flags";
+
 declare function escape(s: string): string;
 
 export default class ByteParserUtils {
