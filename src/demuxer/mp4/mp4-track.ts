@@ -27,6 +27,7 @@ export class Mp4Track extends Track {
     private trunInfo: Trun[] = [];
     private trunInfoReadIndex: number = 0;
     private lastPts: number = null;
+    private lastPtsUnscaledUint: number = null;
     private timescale: number = null;
     private defaults: Mp4TrackDefaults = null;
     private defaultSampleFlagsParsed: SampleFlags = null;
@@ -43,6 +44,7 @@ export class Mp4Track extends Track {
 
         super(id, type, mimeType);
         this.lastPts = 0;
+        this.lastPtsUnscaledUint = 0;
         this.duration = 0;
 
         if (this.dataOffset < 0) {
@@ -136,11 +138,16 @@ export class Mp4Track extends Track {
 
     public setSidxAtom(atom: Atom): void {
         this.sidx = atom as Sidx;
+        this.lastPtsUnscaledUint = this.sidx.earliestPresentationTime;
         this.lastPts = 1000000 * this.sidx.earliestPresentationTime / this.sidx.timescale;
         this.timescale = this.sidx.timescale;
     }
 
     public appendFrame(frame: Frame) {
+        if (!frame.hasUnscaledIntegerTiming()) {
+            throw new Error('Frame must have unscaled-int sample timing');
+        }
+        this.lastPtsUnscaledUint += frame.durationUnscaled;
         this.lastPts += frame.duration;
         this.duration += frame.duration;
         this.frames.push(frame);
@@ -176,8 +183,9 @@ export class Mp4Track extends Track {
 
                 const flags = sample.flags || this.defaultSampleFlagsParsed;
                 if (!flags) {
-                  // in fact the trun box parser should provide a fallback instance of flags in this case
-                  //throw new Error('Invalid file, sample has no flags');
+                    warn('no default sample flags in track sample-run');
+                    // in fact the trun box parser should provide a fallback instance of flags in this case
+                    //throw new Error('Invalid file, sample has no flags');
                 }
 
                 const cto: number = toMicroseconds((sample.compositionTimeOffset || 0), timescale);
@@ -193,9 +201,14 @@ export class Mp4Track extends Track {
                     cto
                 );
 
+                newFrame.durationUnscaled = sampleDuration;
+                newFrame.timeUnscaled = this.lastPtsUnscaledUint;
+                newFrame.ptOffsetUnscaled = sample.compositionTimeOffset || 0;
+                newFrame.timescale = timescale;
+
                 this.appendFrame(newFrame);
 
-                debug(`frame: ${newFrame.timeUs} -> ${newFrame.bytesOffset} / ${newFrame.size}`, newFrame)
+                debug(`frame: @ ${newFrame.timeUs} [us] -> ${newFrame.bytesOffset} / ${newFrame.size}`)
 
                 bytesOffset += sample.size;
             }

@@ -46,14 +46,19 @@ export class Mp4SampleTable {
 
                 const isSyncFrame = this.syncSamples ? (this.syncSamples.syncSampleNumbers.indexOf(frameCount + 1) >= 0) : false;
 
-                frames.push(
-                    new Frame(
-                        isSyncFrame ? Frame.IDR_FRAME : Frame.P_FRAME,
-                        toMicroseconds(dts, this._track.getTimescale()),
-                        this.sampleSizes.sampleSize || this.sampleSizes.entries[frameCount],
-                        toMicroseconds(entry.sampleDelta, this._track.getTimescale())
-                    )
-                )
+                const newFrame = new Frame(
+                    isSyncFrame ? Frame.IDR_FRAME : Frame.P_FRAME,
+                    toMicroseconds(dts, this._track.getTimescale()),
+                    this.sampleSizes.sampleSize || this.sampleSizes.entries[frameCount],
+                    toMicroseconds(entry.sampleDelta, this._track.getTimescale())
+                );
+
+                newFrame.durationUnscaled = entry.sampleDelta;
+                newFrame.timeUnscaled = dts;
+                newFrame.ptOffsetUnscaled = 0;
+                newFrame.timescale = this._track.getTimescale();
+
+                frames.push(newFrame);
 
                 frameCount++; // note: here we incr the count after using it as an ordinal index
 
@@ -68,6 +73,8 @@ export class Mp4SampleTable {
 
                 frames[frameCount]
                     .setPresentationTimeOffsetUs(toMicroseconds(entry.sampleCTimeOffset, this._track.getTimescale()));
+
+                frames[frameCount].ptOffsetUnscaled = entry.sampleCTimeOffset;
 
                 frameCount++; // note: here we incr the count after using it as an ordinal index
             }
@@ -118,7 +125,9 @@ export class Mp4SampleTable {
         });
 
         // Finally, append all frames to our track
-        frames.forEach((frame) => this._track.appendFrame(frame));
+        frames.forEach((frame) => {
+            this._track.appendFrame(frame)
+        });
 
         log(frames)
     }
