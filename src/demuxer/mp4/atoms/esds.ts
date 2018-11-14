@@ -21,12 +21,16 @@ export class Esds extends Atom {
     public esId: number;
     public streamPriority: number;
     public decoderConfig: DecoderConfig;
+    public data: Uint8Array;
 
     public static parse(data: Uint8Array): Atom {
         const esds: Esds = new Esds(Atom.esds, data.byteLength);
 
+        esds.data = data;
+
         esds.version = data[0];
         esds.flags = data.subarray(1, 4);
+
         esds.esId = ByteParserUtils.parseUint16(data, 6);
         esds.streamPriority = data[8] & 0x1f;
         esds.decoderConfig = new DecoderConfig(

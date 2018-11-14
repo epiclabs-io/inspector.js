@@ -26,6 +26,7 @@ import { Mdhd } from './atoms/mdhd';
 import {getLogger} from '../../utils/logger';
 
 import { Mp4SampleTable } from './mp4-sample-table';
+import { Esds } from './atoms/esds';
 
 const {log, warn} = getLogger('Mp4Demuxer');
 
@@ -38,7 +39,7 @@ export class Mp4Demuxer implements IDemuxer {
     private lastTrackId: number;
     private lastTrackDataOffset: number;
     private lastAudioVideoAtom: AudioAtom | VideoAtom = null;
-    private lastCodecDataAtom: AvcC | Hev1 = null;
+    private lastCodecDataAtom: AvcC | Hev1 | Esds = null;
     private lastSampleTable: Mp4SampleTable = null;
     private lastTimescale: number = null;
 
@@ -147,17 +148,14 @@ export class Mp4Demuxer implements IDemuxer {
                 this.lastTrackId = (atom as Tkhd).trackId;
                 break;
 
-            case Atom.hvcC:
-                this.lastCodecDataAtom = atom as Hev1;
-                this._attemptCreateTrack(Track.TYPE_VIDEO, Track.MIME_TYPE_HEVC, atom);
-                break;
-
-            case Atom.avcC:
-                this.lastCodecDataAtom = atom as AvcC;
-                this._attemptCreateTrack(Track.TYPE_VIDEO, Track.MIME_TYPE_AVC, atom);
-                break;
-
             // Inside moov: Codec data -> create "known" tracks
+
+            // stsd-boxed codec identifying atoms
+
+            // AAC
+            case Atom.mp4a:
+                this.lastAudioVideoAtom = atom as AudioAtom | VideoAtom;
+                break;
 
             // H264
             case Atom.avc1:
@@ -169,11 +167,20 @@ export class Mp4Demuxer implements IDemuxer {
                 this.lastAudioVideoAtom = atom as AudioAtom | VideoAtom;
                 break;
 
-            // AAC
-            case Atom.mp4a:
-                this.lastAudioVideoAtom = atom as AudioAtom | VideoAtom;
-                this._attemptCreateTrack(Track.TYPE_AUDIO, Track.MIME_TYPE_AAC, atom);
+            // AVC/HEVC -> H264/5
+            case Atom.hvcC:
+                this.lastCodecDataAtom = atom as Hev1;
+                this._attemptCreateTrack(Track.TYPE_VIDEO, Track.MIME_TYPE_HEVC, atom);
                 break;
+
+            case Atom.avcC:
+                this.lastCodecDataAtom = atom as AvcC;
+                this._attemptCreateTrack(Track.TYPE_VIDEO, Track.MIME_TYPE_AVC, atom);
+                break;
+
+            case Atom.esds:
+                this._attemptCreateTrack(Track.TYPE_AUDIO, Track.MIME_TYPE_AAC, atom);
+                this.lastCodecDataAtom = atom as Esds;
 
             // Fragmented-mode ...
 
@@ -272,6 +279,7 @@ export class Mp4Demuxer implements IDemuxer {
                 this.lastTrackDataOffset
               );
             if (this.lastTimescale !== null) {
+                log('got timescale:', this.lastTimescale);
                 track.setTimescale(this.lastTimescale);
             }
             this.tracks[this.lastTrackId] = track;
