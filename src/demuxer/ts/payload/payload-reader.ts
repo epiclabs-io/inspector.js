@@ -1,7 +1,7 @@
 import { BitReader } from '../../../utils/bit-reader';
 import { Frame } from '../../frame';
 
-export class PayloadReader {
+export abstract class PayloadReader {
     public firstTimestamp: number = -1;
     public timeUs: number = -1;
     public frames: Frame[] = [];
@@ -9,8 +9,21 @@ export class PayloadReader {
 
     protected dataOffset: number;
 
+    private firstPacketDataOffset: number;
+
+    constructor() {
+        this.reset();
+    }
+
     public append(packet: BitReader): void {
+
+        if (isNaN(this.firstPacketDataOffset)) {
+            console.log('first packet data offset:', packet.buffer.byteOffset + packet.bytesOffset())
+            this.firstPacketDataOffset = packet.buffer.byteOffset + packet.bytesOffset();
+        }
+
         const dataToAppend: Uint8Array = packet.buffer.subarray(packet.bytesOffset());
+
         if (!this.dataBuffer) {
             this.dataBuffer = dataToAppend;
         } else {
@@ -37,9 +50,7 @@ export class PayloadReader {
         this.dataOffset = 0;
     }
 
-    public consumeData(pts: number): void {
-        throw new Error('Should have implemented this');
-    }
+    public abstract consumeData(pts: number): void;
 
     public getMimeType(): string {
         return 'Unknown';
@@ -55,5 +66,9 @@ export class PayloadReader {
 
     public getLastPTS(): number {
         return this.timeUs;
+    }
+
+    public getFirstPacketDataOffset(): number {
+        return this.firstPacketDataOffset;
     }
 }

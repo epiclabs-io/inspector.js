@@ -53,9 +53,9 @@ export class Mp4SampleTable {
                     toMicroseconds(entry.sampleDelta, this._track.getTimescale())
                 );
 
-                newFrame.durationUnscaled = entry.sampleDelta;
-                newFrame.timeUnscaled = dts;
-                newFrame.ptOffsetUnscaled = 0;
+                newFrame.scaledDuration = entry.sampleDelta;
+                newFrame.scaledDecodingTime = dts;
+                newFrame.scaledPresentationTimeOffset = 0;
                 newFrame.timescale = this._track.getTimescale();
 
                 frames.push(newFrame);
@@ -74,7 +74,7 @@ export class Mp4SampleTable {
                 frames[frameCount]
                     .setPresentationTimeOffsetUs(toMicroseconds(entry.sampleCTimeOffset, this._track.getTimescale()));
 
-                frames[frameCount].ptOffsetUnscaled = entry.sampleCTimeOffset;
+                frames[frameCount].scaledPresentationTimeOffset = entry.sampleCTimeOffset;
 
                 frameCount++; // note: here we incr the count after using it as an ordinal index
             }

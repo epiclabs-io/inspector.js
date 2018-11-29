@@ -27,8 +27,9 @@ import {getLogger} from '../../utils/logger';
 
 import { Mp4SampleTable } from './mp4-sample-table';
 import { Esds } from './atoms/esds';
+import { LoggerLevels } from '../../../../../logger';
 
-const {log, warn} = getLogger('Mp4Demuxer');
+const {log, warn} = getLogger('Mp4Demuxer', LoggerLevels.OFF);
 
 export class Mp4Demuxer implements IDemuxer {
     public tracks: TracksHash = {};

@@ -152,6 +152,9 @@ export class MpegTSDemuxer implements IDemuxer {
     }
 
     private processTSPacket(packet: Uint8Array): void {
+
+        console.log('packet found at offset:', packet.byteOffset)
+
         this.packetsCount++;
 
         const packetParser: BitReader = new BitReader(packet);

@@ -14,7 +14,7 @@ import { Avc1 } from './atoms/avc1';
 import {getLogger} from '../../utils/logger';
 import { toMicroseconds } from '../../utils/timescale';
 
-const {log, debug, warn} = getLogger('Mp4Track');
+const {log, debug, warn} = getLogger('Mp4Track', 0);
 
 export type Mp4TrackDefaults = {
   sampleDuration: number;
@@ -144,10 +144,10 @@ export class Mp4Track extends Track {
     }
 
     public appendFrame(frame: Frame) {
-        if (!frame.hasUnscaledIntegerTiming()) {
+        if (!frame.hasUnnormalizedIntegerTiming()) {
             throw new Error('Frame must have unscaled-int sample timing');
         }
-        this.lastPtsUnscaledUint += frame.durationUnscaled;
+        this.lastPtsUnscaledUint += frame.scaledDuration;
         this.lastPts += frame.duration;
         this.duration += frame.duration;
         this.frames.push(frame);
@@ -201,9 +201,9 @@ export class Mp4Track extends Track {
                     cto
                 );
 
-                newFrame.durationUnscaled = sampleDuration;
-                newFrame.timeUnscaled = this.lastPtsUnscaledUint;
-                newFrame.ptOffsetUnscaled = sample.compositionTimeOffset || 0;
+                newFrame.scaledDuration = sampleDuration;
+                newFrame.scaledDecodingTime = this.lastPtsUnscaledUint;
+                newFrame.scaledPresentationTimeOffset = sample.compositionTimeOffset || 0;
                 newFrame.timescale = timescale;
 
                 this.appendFrame(newFrame);

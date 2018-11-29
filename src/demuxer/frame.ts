@@ -8,13 +8,14 @@ export class Frame {
     public static B_FRAME: string = 'B';
     public static UNFLAGGED_FRAME: string = '/';
 
+    // normalized micros value
     private presentationTimeUs: number = 0;
 
-    // unscaled integer values
+    // ideally have unnormalized integer values
     public timescale: number = NaN;
-    public timeUnscaled: number = NaN;
-    public ptOffsetUnscaled: number = NaN;
-    public durationUnscaled: number = NaN;
+    public scaledDecodingTime: number = NaN;
+    public scaledPresentationTimeOffset: number = NaN;
+    public scaledDuration: number = NaN;
 
     constructor (
         public frameType: string,
@@ -27,11 +28,11 @@ export class Frame {
         this.setPresentationTimeOffsetUs(presentationTimeOffsetUs);
     }
 
-    hasUnscaledIntegerTiming() {
+    hasUnnormalizedIntegerTiming() {
         return Number.isFinite(this.timescale)
-            && Number.isFinite(this.timeUnscaled)
-            && Number.isFinite(this.ptOffsetUnscaled)
-            && Number.isFinite(this.durationUnscaled);
+            && Number.isFinite(this.scaledDecodingTime)
+            && Number.isFinite(this.scaledPresentationTimeOffset)
+            && Number.isFinite(this.scaledDuration);
     }
 
     getDecodingTimeUs() {
