@@ -10,9 +10,9 @@ import { Frame } from '../frame';
 
 import { toMicroseconds } from '../../utils/timescale';
 
-import {getLogger} from '../../utils/logger';
+import {getLogger, LoggerLevels} from '../../utils/logger';
 
-const {log, debug, warn} = getLogger('Mp4SampleTable');
+const {log, debug} = getLogger('Mp4SampleTable', LoggerLevels.OFF);
 
 export class Mp4SampleTable {
     decodingTimestamps: Stts;
