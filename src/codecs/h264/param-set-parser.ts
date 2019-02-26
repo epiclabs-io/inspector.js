@@ -145,9 +145,11 @@ export class ParameterSetParser {
             fps_num: number = 0,
             fps_den: number = 0;
 
+        // @see https://sourceforge.net/p/h264bitstream/code/HEAD/tree/trunk/h264bitstream/h264_stream.c#l363
         let vui_parameters_present_flag: boolean = gb.readBool();
 
         if (vui_parameters_present_flag) {
+
             if (gb.readBool()) {  // aspect_ratio_info_present_flag
                 const aspect_ratio_idc: number = gb.readByte();
                 const sar_w_table: number[] = [1, 12, 10, 16, 40, 24, 20, 32, 80, 18, 15, 64, 160, 4, 3, 2];
@@ -162,22 +164,30 @@ export class ParameterSetParser {
                 }
             }
 
-            if (gb.readBool()) {
+            if (gb.readBool()) { //overscan_info_present
                 gb.readBool();
             }
-            if (gb.readBool()) {
-                gb.readBits(4);
+
+            if (gb.readBool()) { // video_signal_type_present
+                gb.readBits(3);
+                gb.readBool();
                 if (gb.readBool()) {
-                    gb.readBits(24);
+                    gb.readBits(8);
+                    gb.readBits(8);
+                    gb.readBits(8);
                 }
             }
-            if (gb.readBool()) {
+
+            if (gb.readBool()) { // chroma_loc_info_present
                 gb.readUEG();
                 gb.readUEG();
             }
-            if (gb.readBool()) {
+
+            if (gb.readBool()) { // timing_info_present
+
                 const num_units_in_tick: number = gb.readBits(32);
                 const time_scale: number = gb.readBits(32);
+
                 fps_fixed = gb.readBool();
 
                 fps_num = time_scale;
