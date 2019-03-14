@@ -38,7 +38,6 @@ export class Mp4SampleTable {
 
         const frames: Frame[] = [];
         const chunksDecompressed: {samplesPerChunk: number, sampleDescriptionIndex: number}[] = []
-        const chunkOffsetsDecompressed: number[] = [];
 
         this.decodingTimestamps.timeToSamples.forEach((entry: TimeToSampleEntry) => {
 
@@ -66,43 +65,48 @@ export class Mp4SampleTable {
             }
         });
 
-        frameCount = 0;
-
-        this.compositionTimestampOffsets && this.compositionTimestampOffsets.cTimeOffsetToSamples.forEach((entry: CTimeOffsetToSampleEntry) => {
-            for (let i = 0; i < entry.sampleCount; i++) {
-
-                frames[frameCount]
-                    .setPresentationTimeOffsetUs(toMicroseconds(entry.sampleCTimeOffset, this._track.getTimescale()));
-
-                frames[frameCount].scaledPresentationTimeOffset = entry.sampleCTimeOffset;
-
-                frameCount++; // note: here we incr the count after using it as an ordinal index
-            }
-        });
+        if (frameCount !== frames.length) {
+            throw new Error('Sample-to-chunk-list decompression yields inconsistent sample count. Input data may be corrupt.');
+        }
 
         frameCount = 0;
+
+        // Having a CTO table is not mandatory
+        if (this.compositionTimestampOffsets) {
+            this.compositionTimestampOffsets.cTimeOffsetToSamples.forEach((entry: CTimeOffsetToSampleEntry) => {
+                for (let i = 0; i < entry.sampleCount; i++) {
+
+                    frames[frameCount]
+                        .setPresentationTimeOffsetUs(toMicroseconds(entry.sampleCTimeOffset, this._track.getTimescale()));
+
+                    frames[frameCount].scaledPresentationTimeOffset = entry.sampleCTimeOffset;
+
+                    frameCount++; // note: here we incr the count after using it as an ordinal index
+                }
+            });
+        }
 
         this.samplesToChunkBox.sampleToChunks.forEach((sampleToChunkEntry: SampleToChunkEntry, index) => {
+
             // the sample-to-chunk box contains a compressed list
             // of possibly repeating properties (samplesPerChunk + sampleDescriptionIndex)
             // we need to decompress this information by looking at firstChunkIndex
+
             let chunksInThisEntry = 1;
             if (index < this.samplesToChunkBox.sampleToChunks.length - 1) {
                 chunksInThisEntry = this.samplesToChunkBox.sampleToChunks[index + 1].firstChunk
                     - sampleToChunkEntry.firstChunk;
             }
 
-            for (let i=0; i < chunksInThisEntry; i++) {
-                frameCount += this.samplesToChunkBox.sampleToChunks[index].samplesPerChunk
+            if (this.samplesToChunkBox.sampleToChunks.length === 1) {
+                chunksInThisEntry = frames.length / sampleToChunkEntry.samplesPerChunk;
+            }
 
+            for (let i=0; i < chunksInThisEntry; i++) {
                 chunksDecompressed.push(sampleToChunkEntry);
             }
 
         });
-
-        if (frameCount !== frames.length) {
-            throw new Error('Sample-to-chunk-list decompression yields inconsistent sample count. Input data may be corrupt.');
-        }
 
         frameCount = 0;
 
@@ -123,6 +127,10 @@ export class Mp4SampleTable {
             }
 
         });
+
+        if (frameCount !== frames.length) {
+            throw new Error('Sample-to-chunk-list decompression yields inconsistent sample count. Input data may be corrupt.');
+        }
 
         // Finally, append all frames to our track
         frames.forEach((frame) => {
