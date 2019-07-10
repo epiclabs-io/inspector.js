@@ -79,18 +79,6 @@ export default class ByteParserUtils {
         return new Date(seconds * 1000 - 2082844800000);
     }
 
-    public static parseIsoBoxSampleFlags(flags: number): Mp4SampleFlags {
-        return {
-            isLeading: (flags[0] & 0x0c) >>> 2,
-            dependsOn: flags[0] & 0x03,
-            isDependedOn: (flags[1] & 0xc0) >>> 6,
-            hasRedundancy: (flags[1] & 0x30) >>> 4,
-            paddingValue: (flags[1] & 0x0e) >>> 1,
-            isNonSyncSample: flags[1] & 0x01,
-            degradationPriority: (flags[2] << 8) | flags[3]
-        };
-    }
-
     public static parseBufferToHex(buffer: Uint8Array, offset: number, end: number): string {
         let str: string = '';
         for (let i: number = offset; i < end; i++) {
