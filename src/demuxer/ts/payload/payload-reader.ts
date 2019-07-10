@@ -18,7 +18,6 @@ export abstract class PayloadReader {
     public append(packet: BitReader): void {
 
         if (isNaN(this.firstPacketDataOffset)) {
-            console.log('first packet data offset:', packet.buffer.byteOffset + packet.bytesOffset())
             this.firstPacketDataOffset = packet.buffer.byteOffset + packet.bytesOffset();
         }
 

@@ -34,6 +34,30 @@ export class Fraction {
 }
 
 export class H264Reader extends PayloadReader {
+
+    static getNALUnitName(nalType: number): string {
+        switch (nalType) {
+            case NAL_UNIT_TYPE.SLICE:
+                return 'SLICE';
+            case NAL_UNIT_TYPE.SEI:
+                return 'SEI';
+            case NAL_UNIT_TYPE.PPS:
+                return 'PPS';
+            case NAL_UNIT_TYPE.SPS:
+                return 'SPS';
+            case NAL_UNIT_TYPE.AUD:
+                return 'AUD';
+            case NAL_UNIT_TYPE.IDR:
+                return 'IDR';
+            case NAL_UNIT_TYPE.END_SEQUENCE:
+                return 'END SEQUENCE';
+            case NAL_UNIT_TYPE.END_STREAM:
+                return 'END STREAM';
+            default:
+                return 'Unknown';
+        }
+    }
+
     public sps: Sps;
     public pps: boolean;
     public pendingBytes: number;
@@ -72,8 +96,6 @@ export class H264Reader extends PayloadReader {
 
     public consumeData(pts: number): void {
 
-        console.log('consumeData');
-
         if (!this.dataBuffer) {
             return;
         }
@@ -109,8 +131,6 @@ export class H264Reader extends PayloadReader {
                 offset = nextNalUnit;
             }
 
-            console.log('shifting buffer:', offset)
-
             this.dataOffset += offset;
             this.dataBuffer = this.dataBuffer.subarray(offset);
             this.pendingBytes = this.dataBuffer.byteLength;
@@ -129,6 +149,7 @@ export class H264Reader extends PayloadReader {
     }
 
     private processNALUnit(start: number, limit: number, nalType: number): void {
+
         if (nalType === NAL_UNIT_TYPE.SPS) {
             this.parseSPSNALUnit(start, limit);
         } else if (nalType === NAL_UNIT_TYPE.PPS) {
@@ -225,33 +246,7 @@ export class H264Reader extends PayloadReader {
         }
     }
 
-    private getNALUnitName(nalType: number): string {
-        switch (nalType) {
-            case NAL_UNIT_TYPE.SLICE:
-                return 'SLICE';
-            case NAL_UNIT_TYPE.SEI:
-                return 'SEI';
-            case NAL_UNIT_TYPE.PPS:
-                return 'PPS';
-            case NAL_UNIT_TYPE.SPS:
-                return 'SPS';
-            case NAL_UNIT_TYPE.AUD:
-                return 'AUD';
-            case NAL_UNIT_TYPE.IDR:
-                return 'IDR';
-            case NAL_UNIT_TYPE.END_SEQUENCE:
-                return 'END SEQUENCE';
-            case NAL_UNIT_TYPE.END_STREAM:
-                return 'END STREAM';
-            default:
-                return 'Unknown';
-        }
-    }
-
     private addNewFrame(frameType: string, frameSize: number, duration: number): void {
-
-        console.log('frame bytes offset:', this.frameBytesOffset)
-
         const frame = new Frame(frameType, this.timeUs, frameSize, duration, this.frameBytesOffset);
         this.frames.push(frame);
     }
