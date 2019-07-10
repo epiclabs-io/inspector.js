@@ -2,7 +2,7 @@ import { BitReader } from '../../../utils/bit-reader';
 import { PayloadReader } from './payload-reader';
 import { Frame } from '../../frame';
 import { Track } from '../../track';
-import { SPSParser } from '../../../codecs/h264/sps-parser';
+import { ParameterSetParser } from '../../../codecs/h264/param-set-parser';
 import { Sps } from '../../../codecs/h264/nal-units';
 
 enum NAL_UNIT_TYPE {
@@ -166,7 +166,7 @@ export class H264Reader extends PayloadReader {
     }
 
     private parseSPSNALUnit(start: number, limit: number): void {
-        this.sps = SPSParser.parseSPS(this.dataBuffer.subarray(start + 4, limit));
+        this.sps = ParameterSetParser.parseSPS(this.dataBuffer.subarray(start + 4, limit));
     }
 
     private skipScalingList(parser: BitReader, size: number): void {

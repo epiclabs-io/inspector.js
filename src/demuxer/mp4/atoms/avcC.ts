@@ -1,6 +1,6 @@
 import ByteParserUtils from '../../../utils/byte-parser-utils';
 import { Atom } from './atom';
-import { SPSParser } from '../../../codecs/h264/sps-parser';
+import { ParameterSetParser } from '../../../codecs/h264/param-set-parser';
 import { Sps, Pps } from '../../../codecs/h264/nal-units';
 
 export class AvcC extends Atom {
@@ -38,7 +38,7 @@ export class AvcC extends Atom {
             avcC.sps.push(sps);
             offset += spsSize;
 
-            avcC.spsParsed.push(SPSParser.parseSPS(sps.subarray(1, spsSize)));
+            avcC.spsParsed.push(ParameterSetParser.parseSPS(sps.subarray(1, spsSize)));
         }
 
         avcC.numOfPictureParameterSets = data[offset] & 0x1f;
@@ -52,7 +52,7 @@ export class AvcC extends Atom {
             avcC.pps.push(new Uint8Array(data.subarray(offset, offset + ppsSize)));
             offset += ppsSize;
 
-            avcC.ppsParsed.push(SPSParser.parsePPS(pps.subarray(1, ppsSize)))
+            avcC.ppsParsed.push(ParameterSetParser.parsePPS(pps.subarray(1, ppsSize)))
         }
 
         return avcC;

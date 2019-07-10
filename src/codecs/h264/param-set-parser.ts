@@ -2,7 +2,7 @@ import { BitReader } from '../../utils/bit-reader';
 import { Sps, Pps } from './nal-units';
 import { Size, FrameRate } from '../video-types';
 
-export class SPSParser {
+export class ParameterSetParser {
 
     static getProfileString(profile_idc: number): string {
         switch (profile_idc) {
@@ -62,8 +62,8 @@ export class SPSParser {
 
         const seq_parameter_set_id: number = gb.readUEG();
 
-        const profile_string: string = SPSParser.getProfileString(profile_idc);
-        const level_string: string = SPSParser.getLevelString(level_idc);
+        const profile_string: string = ParameterSetParser.getProfileString(profile_idc);
+        const level_string: string = ParameterSetParser.getLevelString(level_idc);
 
         let chroma_format_idc: number = 1;
         let chroma_format: number = 420;
@@ -91,9 +91,9 @@ export class SPSParser {
                 for (let i: number = 0; i < scaling_list_count; i++) {
                     if (gb.readBool()) {
                         if (i < 6) {
-                            SPSParser.skipScalingList(gb, 16);
+                            ParameterSetParser.skipScalingList(gb, 16);
                         } else {
-                            SPSParser.skipScalingList(gb, 64);
+                            ParameterSetParser.skipScalingList(gb, 64);
                         }
                     }
                 }
@@ -219,7 +219,7 @@ export class SPSParser {
             level_string,
             bit_depth,
             chroma_format,
-            SPSParser.getChromaFormatString(chroma_format),
+            ParameterSetParser.getChromaFormatString(chroma_format),
             new FrameRate(fps_fixed, fps, fps_den, fps_num),
             new Size(sar_width, sar_height),
             new Size(codec_width, codec_height),
