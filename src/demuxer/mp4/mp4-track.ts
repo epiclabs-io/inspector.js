@@ -38,7 +38,7 @@ export class Mp4Track extends Track {
         id: number,
         type: string,
         mimeType: string,
-        public referenceAtom: Atom,
+        public referenceAtoms: Atom[],
         public metadataAtom: AudioAtom | VideoAtom,
         public dataOffset: number
     ) {
@@ -70,8 +70,12 @@ export class Mp4Track extends Track {
       return this.trunInfo;
     }
 
-    public getReferenceAtom(): Atom {
-      return this.referenceAtom;
+    public getReferenceAtoms(): Atom[] {
+      return this.referenceAtoms;
+    }
+
+    public addReferenceAtom(atom: Atom) {
+        this.referenceAtoms.push(atom);
     }
 
     public getMetadataAtom(): VideoAtom | AudioAtom {

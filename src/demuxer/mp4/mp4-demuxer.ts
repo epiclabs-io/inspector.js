@@ -29,7 +29,7 @@ import { Mp4SampleTable } from './mp4-sample-table';
 import { Esds } from './atoms/esds';
 import { Mvhd } from './atoms/mvhd';
 
-const {log, warn} = getLogger('Mp4Demuxer', LoggerLevels.OFF);
+const {log, warn} = getLogger('Mp4Demuxer', LoggerLevels.ON);
 
 export class Mp4Demuxer implements IDemuxer {
     public tracks: TracksHash = {};
@@ -273,22 +273,31 @@ export class Mp4Demuxer implements IDemuxer {
     }
 
     private _attemptCreateTrack(type: string, mime: string, ref: Atom) {
-        if (this.lastTrackId > 0) {
-            log('creating new track:', type, mime)
-            const track = new Mp4Track(
-                this.lastTrackId,
-                type,
-                mime,
-                ref,
-                this.lastAudioVideoAtom,
-                this.lastTrackDataOffset
-              );
-            if (this.lastTimescale !== null) {
-                log('setting parent timescale on track:', this.lastTimescale);
-                track.setTimescale(this.lastTimescale);
-            }
-            this.tracks[this.lastTrackId] = track;
+        if (!this.lastTrackId) {
+            throw new Error('No track-id set');
         }
+
+        if (this.tracks[this.lastTrackId]) {
+            log('adding ref-atom to existing track with id:', this.lastTrackId, 'mime:', mime, 'type:', type);
+            (this.tracks[this.lastTrackId] as Mp4Track).addReferenceAtom(ref);
+            return;
+        }
+
+        log('creating new track:', type, mime, 'id:', this.lastTrackId)
+        const track = new Mp4Track(
+            this.lastTrackId,
+            type,
+            mime,
+            [ref],
+            this.lastAudioVideoAtom,
+            this.lastTrackDataOffset
+            );
+        if (this.lastTimescale !== null) {
+            log('setting parent timescale on track:', this.lastTimescale);
+            track.setTimescale(this.lastTimescale);
+        }
+        this.tracks[this.lastTrackId] = track;
+
     }
 
     /**
