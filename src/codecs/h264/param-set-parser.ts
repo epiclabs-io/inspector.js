@@ -21,7 +21,7 @@ export class ParameterSetParser {
             case 244:
                 return 'High444';
             default:
-                return 'Unknown';
+                return 'Unspecified Profile-IDC value: ' + profile_idc;
         }
     }
 
@@ -38,7 +38,7 @@ export class ParameterSetParser {
             case 444:
                 return '4:4:4';
             default:
-                return 'Unknown';
+                return 'Unspecified chroma-format value: ' + chroma;
         }
     }
 
@@ -226,7 +226,9 @@ export class ParameterSetParser {
         return new Sps(
             seq_parameter_set_id,
             profile_string,
+            profile_idc,
             level_string,
+            level_idc,
             bit_depth,
             chroma_format,
             ParameterSetParser.getChromaFormatString(chroma_format),

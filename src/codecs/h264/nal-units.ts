@@ -4,7 +4,9 @@ export class Sps {
     constructor (
         public id: number,
         public profile: string,
+        public profileIdc: number,
         public level: string,
+        public levelIdc: number,
         public bitDepth: number,
         public chromaFormat: number,
         public chromaFormatStr: string,
