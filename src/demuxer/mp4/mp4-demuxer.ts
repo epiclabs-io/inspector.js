@@ -27,10 +27,7 @@ import {getLogger, LoggerLevels} from '../../utils/logger';
 
 import { Mp4SampleTable } from './mp4-sample-table';
 import { Esds } from './atoms/esds';
-<<<<<<< HEAD
 import { Mvhd } from './atoms/mvhd';
-=======
->>>>>>> cf60f5e... fix logger usage: was relying on top-project mmjs logger
 
 const {log, warn} = getLogger('Mp4Demuxer', LoggerLevels.OFF);
 
