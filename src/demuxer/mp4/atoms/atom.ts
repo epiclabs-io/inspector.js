@@ -80,8 +80,7 @@ export class Atom {
     public static mfhd: string = 'mfhd';
     public static emsg: string = 'emsg';
 
-    constructor (public type: string, public size: number) {
-    }
+    constructor (public type: string, public size: number) {}
 
     public static isContainerBox(type: string): boolean {
         return type === Atom.moov || type === Atom.trak || type === Atom.mdia

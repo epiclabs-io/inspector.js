@@ -1,7 +1,7 @@
 import ByteParserUtils from '../../../utils/byte-parser-utils';
-import { Atom, ContainerAtom } from './atom';
+import { Atom } from './atom';
 import { SPSParser } from '../../../codecs/h264/sps-parser';
-import { Sps } from '../../../codecs/h264/nal-units';
+import { Sps, Pps } from '../../../codecs/h264/nal-units';
 
 export class AvcC extends Atom {
     public version: number;
@@ -14,10 +14,13 @@ export class AvcC extends Atom {
     public sps: Uint8Array[];
     public spsParsed: Sps[];
     public pps: Uint8Array[];
+    public ppsParsed: Pps[];
+    public data: Uint8Array;
 
     public static parse(data: Uint8Array): Atom {
         const avcC: AvcC = new AvcC(Atom.avcC, data.byteLength);
 
+        avcC.data = data;
         avcC.version = data[0];
         avcC.profile = data[1];
         avcC.profileCompatibility = data[2];
@@ -40,12 +43,16 @@ export class AvcC extends Atom {
 
         avcC.numOfPictureParameterSets = data[offset] & 0x1f;
         avcC.pps = [];
+        avcC.ppsParsed = [];
         offset++;
         for (let i: number = 0; i < avcC.numOfPictureParameterSets; i++) {
             const ppsSize: number = ByteParserUtils.parseUint16(data, offset);
             offset += 2;
+            const pps: Uint8Array = new Uint8Array(data.subarray(offset, offset + ppsSize));
             avcC.pps.push(new Uint8Array(data.subarray(offset, offset + ppsSize)));
             offset += ppsSize;
+
+            avcC.ppsParsed.push(SPSParser.parsePPS(pps.subarray(1, ppsSize)))
         }
 
         return avcC;

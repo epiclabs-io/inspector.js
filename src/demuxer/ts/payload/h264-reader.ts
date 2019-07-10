@@ -34,9 +34,35 @@ export class Fraction {
 }
 
 export class H264Reader extends PayloadReader {
+
+    static getNALUnitName(nalType: number): string {
+        switch (nalType) {
+            case NAL_UNIT_TYPE.SLICE:
+                return 'SLICE';
+            case NAL_UNIT_TYPE.SEI:
+                return 'SEI';
+            case NAL_UNIT_TYPE.PPS:
+                return 'PPS';
+            case NAL_UNIT_TYPE.SPS:
+                return 'SPS';
+            case NAL_UNIT_TYPE.AUD:
+                return 'AUD';
+            case NAL_UNIT_TYPE.IDR:
+                return 'IDR';
+            case NAL_UNIT_TYPE.END_SEQUENCE:
+                return 'END SEQUENCE';
+            case NAL_UNIT_TYPE.END_STREAM:
+                return 'END STREAM';
+            default:
+                return 'Unknown';
+        }
+    }
+
     public sps: Sps;
     public pps: boolean;
     public pendingBytes: number;
+
+    private frameBytesOffset: number;
 
     constructor() {
         super();
@@ -54,6 +80,7 @@ export class H264Reader extends PayloadReader {
             if (this.dataBuffer.byteLength > 0) {
                 const offset: number = this.findNextNALUnit(0);
                 if (offset < this.dataBuffer.byteLength) {
+                    this.frameBytesOffset = this.getFirstPacketDataOffset() + this.dataOffset + offset;
                     this.processNALUnit(offset, this.dataBuffer.byteLength, this.dataBuffer[offset + 3] & 0x1F);
                 }
             }
@@ -68,6 +95,7 @@ export class H264Reader extends PayloadReader {
     }
 
     public consumeData(pts: number): void {
+
         if (!this.dataBuffer) {
             return;
         }
@@ -75,12 +103,13 @@ export class H264Reader extends PayloadReader {
             this.timeUs = this.firstTimestamp = pts;
         }
 
-        // process any possible reminding data
+        // process any possible remaining data
         let nextNalUnit: number = 0;
         let offset: number = 0;
-        if (this.pendingBytes) {
+        if (this.pendingBytes > 0) {
             nextNalUnit = this.findNextNALUnit(this.pendingBytes);
             if (nextNalUnit < this.dataBuffer.byteLength) {
+                this.frameBytesOffset = this.getFirstPacketDataOffset() + this.dataOffset + 0;
                 this.processNALUnit(0, nextNalUnit, this.dataBuffer[offset + 3] & 0x1F);
                 offset = nextNalUnit;
             }
@@ -97,11 +126,12 @@ export class H264Reader extends PayloadReader {
         if (this.dataBuffer.byteLength > 0) {
             while (nextNalUnit < this.dataBuffer.byteLength) {
                 nextNalUnit = this.findNextNALUnit(offset + 3);
-                if (nextNalUnit < this.dataBuffer.byteLength) {
-                    this.processNALUnit(offset, nextNalUnit, this.dataBuffer[offset + 3] & 0x1F);
-                    offset = nextNalUnit;
-                }
+                this.frameBytesOffset = this.getFirstPacketDataOffset() + this.dataOffset + offset;
+                this.processNALUnit(offset, nextNalUnit, this.dataBuffer[offset + 3] & 0x1F);
+                offset = nextNalUnit;
             }
+
+            this.dataOffset += offset;
             this.dataBuffer = this.dataBuffer.subarray(offset);
             this.pendingBytes = this.dataBuffer.byteLength;
         }
@@ -119,6 +149,7 @@ export class H264Reader extends PayloadReader {
     }
 
     private processNALUnit(start: number, limit: number, nalType: number): void {
+
         if (nalType === NAL_UNIT_TYPE.SPS) {
             this.parseSPSNALUnit(start, limit);
         } else if (nalType === NAL_UNIT_TYPE.PPS) {
@@ -126,7 +157,7 @@ export class H264Reader extends PayloadReader {
         } else if (nalType === NAL_UNIT_TYPE.AUD) {
             this.parseAUDNALUnit(start, limit);
         } else if (nalType === NAL_UNIT_TYPE.IDR) {
-            this.addNewFrame(Frame.IDR_FRAME, limit - start);
+            this.addNewFrame(Frame.IDR_FRAME, limit - start, NaN);
         } else if (nalType === NAL_UNIT_TYPE.SEI) {
             this.parseSEINALUnit(start, limit);
         } else if (nalType === NAL_UNIT_TYPE.SLICE) {
@@ -182,7 +213,7 @@ export class H264Reader extends PayloadReader {
         const sliceType: number = sliceParser.readUEG();
         const type: string = this.getSliceTypeName(sliceType);
         if (this.sps && this.pps) {
-            this.addNewFrame(type, limit - start);
+            this.addNewFrame(type, limit - start, NaN);
         } else {
             // console.warn('Slice ' + type + ' received without sps/pps been set');
         }
@@ -215,31 +246,9 @@ export class H264Reader extends PayloadReader {
         }
     }
 
-    private getNALUnitName(nalType: number): string {
-        switch (nalType) {
-            case NAL_UNIT_TYPE.SLICE:
-                return 'SLICE';
-            case NAL_UNIT_TYPE.SEI:
-                return 'SEI';
-            case NAL_UNIT_TYPE.PPS:
-                return 'PPS';
-            case NAL_UNIT_TYPE.SPS:
-                return 'SPS';
-            case NAL_UNIT_TYPE.AUD:
-                return 'AUD';
-            case NAL_UNIT_TYPE.IDR:
-                return 'IDR';
-            case NAL_UNIT_TYPE.END_SEQUENCE:
-                return 'END SEQUENCE';
-            case NAL_UNIT_TYPE.END_STREAM:
-                return 'END STREAM';
-            default:
-                return 'Unknown';
-        }
-    }
-
-    private addNewFrame(frameType: string, frameSize: number): void {
-        this.frames.push(new Frame(frameType, this.timeUs, frameSize));
+    private addNewFrame(frameType: string, frameSize: number, duration: number): void {
+        const frame = new Frame(frameType, this.timeUs, frameSize, duration, this.frameBytesOffset);
+        this.frames.push(frame);
     }
 
 }

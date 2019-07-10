@@ -1,5 +1,8 @@
 import ByteParserUtils from '../../../utils/byte-parser-utils';
 import { Atom } from './atom';
+import {getLogger} from '../../../utils/logger';
+
+const {log, warn} = getLogger('Mdat');
 
 export class Mdat extends Atom {
 
@@ -16,8 +19,12 @@ export class Mdat extends Atom {
             i += 4;
 
             if (length <= 0) {
-                console.log('is this an H264 stream?');
-                continue;
+                //console.log('is this an H264 stream?');
+                //continue;
+
+                // let's break here since otherwise this crashes on AAC data
+                warn('aborted parsing mdat');
+                break;
             }
 
             const nalType: number = data[i] & 0x1F;

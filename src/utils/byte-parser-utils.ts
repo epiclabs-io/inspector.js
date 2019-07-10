@@ -1,12 +1,5 @@
-export class Mp4SampleFlags {
-    public isLeading: number;
-    public dependsOn: number;
-    public isDependedOn: number;
-    public hasRedundancy: number;
-    public paddingValue: number;
-    public isNonSyncSample: number;
-    public degradationPriority: number;
-}
+import { Mp4SampleFlags } from "../demuxer/mp4/mp4-sample-flags";
+
 declare function escape(s: string): string;
 
 export default class ByteParserUtils {
@@ -84,18 +77,6 @@ export default class ByteParserUtils {
 
     public static parseIsoBoxDate(seconds: number): Date {
         return new Date(seconds * 1000 - 2082844800000);
-    }
-
-    public static parseIsoBoxSampleFlags(flags: number): Mp4SampleFlags {
-        return {
-            isLeading: (flags[0] & 0x0c) >>> 2,
-            dependsOn: flags[0] & 0x03,
-            isDependedOn: (flags[1] & 0xc0) >>> 6,
-            hasRedundancy: (flags[1] & 0x30) >>> 4,
-            paddingValue: (flags[1] & 0x0e) >>> 1,
-            isNonSyncSample: flags[1] & 0x01,
-            degradationPriority: (flags[2] << 8) | flags[3]
-        };
     }
 
     public static parseBufferToHex(buffer: Uint8Array, offset: number, end: number): string {

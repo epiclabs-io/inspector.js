@@ -1,6 +1,9 @@
 export class FrameRate {
-    constructor (public fixed: boolean, public fps: number,
-        public fpsDen: number, public fpsNum: number) {
+    constructor (
+        public fixed: boolean,
+        public fps: number,
+        public fpsDen: number,
+        public fpsNum: number) {
             // do nothing
         }
 }

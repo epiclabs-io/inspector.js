@@ -29,8 +29,12 @@ import { Pssh } from './pssh';
 import { HvcC } from './hvcC';
 import { Hvc1 } from './hvc1';
 import { Hev1 } from './hev1';
+import { Stss } from './stss';
+import { Ctts } from './ctts';
 
 export const boxesParsers: {[type: string] : (data: Uint8Array) => Atom } = { };
+
+// Q: can this generalized or abstracted as opposed to explicit registration?
 
 boxesParsers[Atom.ftyp] = Ftyp.parse;
 boxesParsers[Atom.stsd] = Stsd.parse;
@@ -44,8 +48,10 @@ boxesParsers[Atom.hdlr] = Hdlr.parse;
 boxesParsers[Atom.vmhd] = Vmhd.parse;
 boxesParsers[Atom.dref] = Dref.parse;
 boxesParsers[Atom.stts] = Stts.parse;
+boxesParsers[Atom.stss] = Stss.parse;
 boxesParsers[Atom.stsc] = Stsc.parse;
 boxesParsers[Atom.stsz] = Stsz.parse;
+boxesParsers[Atom.ctts] = Ctts.parse;
 boxesParsers[Atom.stco] = Stco.parse;
 boxesParsers[Atom.smhd] = Smhd.parse;
 boxesParsers[Atom.mp4a] = Mp4a.parse;

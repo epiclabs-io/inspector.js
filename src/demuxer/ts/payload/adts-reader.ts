@@ -64,7 +64,8 @@ export class AdtsReader extends PayloadReader {
                     AdtsReader.ADTS_HEADER_SIZE + this.currentFrameSize)) {
                     break;
                 }
-                this.frames.push(new Frame(Frame.IDR_FRAME, this.timeUs, this.currentFrameSize));
+                this.frames.push(new Frame(Frame.IDR_FRAME, this.timeUs, this.currentFrameSize,
+                        this.frameDuration, this.dataOffset));
                 this.timeUs = this.timeUs + this.frameDuration;
 
                 this.dataOffset += (AdtsReader.ADTS_SYNC_SIZE + AdtsReader.ADTS_HEADER_SIZE +

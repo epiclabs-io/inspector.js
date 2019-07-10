@@ -2,9 +2,15 @@ import ByteParserUtils from '../../../utils/byte-parser-utils';
 import { Atom } from './atom';
 
 export class SampleFlags {
-    constructor(public isLeading: number, public dependsOn: number, public isDependedOn: number,
-        public hasRedundancy: number, public paddingValue: number, public isSyncFrame: boolean,
-        public degradationPriority: number) {
+    constructor(
+        public isLeading: number,
+        public dependsOn: number,
+        public isDependedOn: number,
+        public hasRedundancy: number,
+        public paddingValue: number,
+        public isSyncFrame: boolean,
+        public degradationPriority: number
+      ) {
     }
 }
 
@@ -90,7 +96,7 @@ export class Trun extends Atom {
         return trun;
     }
 
-    private static parseFlags(data: Uint8Array): SampleFlags {
+    static parseFlags(data: Uint8Array): SampleFlags {
         return new SampleFlags(
             (data[0] & 0x0c) >>> 2,
             (data[0] & 0x03),

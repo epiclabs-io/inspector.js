@@ -1,17 +1,70 @@
 import { BitReader } from '../../utils/bit-reader';
-import { Sps } from './nal-units';
+import { Sps, Pps } from './nal-units';
 import { Size, FrameRate } from '../video-types';
 
 export class SPSParser {
-    public static parseSPS(data: Uint8Array): Sps {
+
+    static getProfileString(profile_idc: number): string {
+        switch (profile_idc) {
+            case 66:
+                return 'Baseline';
+            case 77:
+                return 'Main';
+            case 88:
+                return 'Extended';
+            case 100:
+                return 'High';
+            case 110:
+                return 'High10';
+            case 122:
+                return 'High422';
+            case 244:
+                return 'High444';
+            default:
+                return 'Unknown';
+        }
+    }
+
+    static getLevelString(level_idc: number): string {
+        return (level_idc / 10).toFixed(1);
+    }
+
+    static getChromaFormatString(chroma: number): string {
+        switch (chroma) {
+            case 420:
+                return '4:2:0';
+            case 422:
+                return '4:2:2';
+            case 444:
+                return '4:4:4';
+            default:
+                return 'Unknown';
+        }
+    }
+
+    static parsePPS(data: Uint8Array): Pps {
+        const gb: BitReader = new BitReader(data);
+
+        const id: number = gb.readUEG();
+        const spsId: number = gb.readUEG();
+        const entropyCodingMode: boolean = gb.readBool();
+
+        gb.destroy();
+
+        return new Pps(id, spsId, entropyCodingMode);
+    }
+
+    static parseSPS(data: Uint8Array): Sps {
         let gb: BitReader = new BitReader(data);
         const profile_idc: number = gb.readByte();
         gb.readByte();
         const level_idc: number = gb.readByte();
-        gb.readUEG();
+
+        const seq_parameter_set_id: number = gb.readUEG();
 
         const profile_string: string = SPSParser.getProfileString(profile_idc);
         const level_string: string = SPSParser.getLevelString(level_idc);
+
         let chroma_format_idc: number = 1;
         let chroma_format: number = 420;
         let chroma_format_table: number[] = [0, 420, 422, 444];
@@ -84,10 +137,16 @@ export class SPSParser {
             frame_crop_bottom_offset = gb.readUEG();
         }
 
-        let sar_width: number = 1, sar_height: number = 1;
-        let fps: number = 0, fps_fixed: boolean = true, fps_num: number = 0, fps_den: number = 0;
+        let sar_width: number = 1;
+        let sar_height: number = 1;
+
+        let fps: number = 0,
+            fps_fixed: boolean = true,
+            fps_num: number = 0,
+            fps_den: number = 0;
 
         let vui_parameters_present_flag: boolean = gb.readBool();
+
         if (vui_parameters_present_flag) {
             if (gb.readBool()) {  // aspect_ratio_info_present_flag
                 const aspect_ratio_idc: number = gb.readByte();
@@ -154,47 +213,18 @@ export class SPSParser {
         gb.destroy();
         gb = null;
 
-        return new Sps(profile_string, level_string, bit_depth, chroma_format,
-            SPSParser.getChromaFormatString(chroma_format), new FrameRate(fps_fixed, fps, fps_den, fps_num),
-            new Size(sar_width, sar_height), new Size(codec_width, codec_height), new Size(present_width, codec_height));
-    }
-
-    private static getProfileString(profile_idc: number): string {
-        switch (profile_idc) {
-            case 66:
-                return 'Baseline';
-            case 77:
-                return 'Main';
-            case 88:
-                return 'Extended';
-            case 100:
-                return 'High';
-            case 110:
-                return 'High10';
-            case 122:
-                return 'High422';
-            case 244:
-                return 'High444';
-            default:
-                return 'Unknown';
-        }
-    }
-
-    private static getLevelString(level_idc: number): string {
-        return (level_idc / 10).toFixed(1);
-    }
-
-    private static getChromaFormatString(chroma: number): string {
-        switch (chroma) {
-            case 420:
-                return '4:2:0';
-            case 422:
-                return '4:2:2';
-            case 444:
-                return '4:4:4';
-            default:
-                return 'Unknown';
-        }
+        return new Sps(
+            seq_parameter_set_id,
+            profile_string,
+            level_string,
+            bit_depth,
+            chroma_format,
+            SPSParser.getChromaFormatString(chroma_format),
+            new FrameRate(fps_fixed, fps, fps_den, fps_num),
+            new Size(sar_width, sar_height),
+            new Size(codec_width, codec_height),
+            new Size(present_width, codec_height)
+        );
     }
 
     private static skipScalingList(gb: BitReader, count: number): void {
