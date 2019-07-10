@@ -11,10 +11,10 @@ import { Sidx } from './atoms/sidx';
 import { Trun, SampleFlags } from './atoms/trun';
 import { Avc1 } from './atoms/avc1';
 
-import {getLogger} from '../../utils/logger';
+import { getLogger, LoggerLevels } from '../../utils/logger';
 import { toMicroseconds } from '../../utils/timescale';
 
-const {log, debug, warn} = getLogger('Mp4Track', 0);
+const {debug, warn} = getLogger('Mp4Track', LoggerLevels.WARN);
 
 export type Mp4TrackDefaults = {
   sampleDuration: number;
@@ -23,6 +23,7 @@ export type Mp4TrackDefaults = {
 }
 
 export class Mp4Track extends Track {
+
     private sidx: Sidx = null;
     private trunInfo: Trun[] = [];
     private trunInfoReadIndex: number = 0;
@@ -167,7 +168,11 @@ export class Mp4Track extends Track {
               return;
             }
 
-            const timescale: number = this.sidx ? this.sidx.timescale : 1;
+            const timescale: number = this.sidx ? this.sidx.timescale : this.getTimescale();
+
+            if (!this.sidx) {
+                warn('No sidx found, using parent timescale:', timescale);
+            }
 
             const sampleRunDataOffset: number = trun.dataOffset + this.getFinalSampleDataOffset();
 

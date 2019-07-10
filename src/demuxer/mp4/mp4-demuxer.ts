@@ -23,11 +23,11 @@ import { Stss } from './atoms/stss';
 import { Stco } from './atoms/stco';
 import { Mdhd } from './atoms/mdhd';
 
-import {getLogger} from '../../utils/logger';
+import {getLogger, LoggerLevels} from '../../utils/logger';
 
 import { Mp4SampleTable } from './mp4-sample-table';
 import { Esds } from './atoms/esds';
-import { LoggerLevels } from '../../../../../logger';
+import { Mvhd } from './atoms/mvhd';
 
 const {log, warn} = getLogger('Mp4Demuxer', LoggerLevels.OFF);
 
@@ -203,6 +203,10 @@ export class Mp4Demuxer implements IDemuxer {
                 this._getLastTrackCreated().addTrunAtom(atom);
                 break;
 
+            case Atom.mvhd:
+                this.lastTimescale = (atom as Mvhd).timescale;
+                break;
+
             // Plain-old MOV ie unfragmented mode ...
 
             case Atom.mdhd:
@@ -280,7 +284,7 @@ export class Mp4Demuxer implements IDemuxer {
                 this.lastTrackDataOffset
               );
             if (this.lastTimescale !== null) {
-                log('got timescale:', this.lastTimescale);
+                log('setting parent timescale on track:', this.lastTimescale);
                 track.setTimescale(this.lastTimescale);
             }
             this.tracks[this.lastTrackId] = track;
