@@ -182,6 +182,7 @@ export class Mp4Demuxer implements IDemuxer {
             case Atom.esds:
                 this._attemptCreateTrack(Track.TYPE_AUDIO, Track.MIME_TYPE_AAC, atom);
                 this.lastCodecDataAtom = atom as Esds;
+                break;
 
             // Fragmented-mode ...
 
