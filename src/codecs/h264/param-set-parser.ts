@@ -2,7 +2,7 @@ import { BitReader } from '../../utils/bit-reader';
 import { Sps, Pps } from './nal-units';
 import { Size, FrameRate } from '../video-types';
 
-export class ParameterSetParser {
+export class H264ParameterSetParser {
 
     static getProfileString(profile_idc: number): string {
         switch (profile_idc) {
@@ -62,8 +62,8 @@ export class ParameterSetParser {
 
         const seq_parameter_set_id: number = gb.readUEG();
 
-        const profile_string: string = ParameterSetParser.getProfileString(profile_idc);
-        const level_string: string = ParameterSetParser.getLevelString(level_idc);
+        const profile_string: string = H264ParameterSetParser.getProfileString(profile_idc);
+        const level_string: string = H264ParameterSetParser.getLevelString(level_idc);
 
         let chroma_format_idc: number = 1;
         let chroma_format: number = 420;
@@ -91,9 +91,9 @@ export class ParameterSetParser {
                 for (let i: number = 0; i < scaling_list_count; i++) {
                     if (gb.readBool()) {
                         if (i < 6) {
-                            ParameterSetParser.skipScalingList(gb, 16);
+                            H264ParameterSetParser.skipScalingList(gb, 16);
                         } else {
-                            ParameterSetParser.skipScalingList(gb, 64);
+                            H264ParameterSetParser.skipScalingList(gb, 64);
                         }
                     }
                 }
@@ -231,7 +231,7 @@ export class ParameterSetParser {
             level_idc,
             bit_depth,
             chroma_format,
-            ParameterSetParser.getChromaFormatString(chroma_format),
+            H264ParameterSetParser.getChromaFormatString(chroma_format),
             new FrameRate(fps_fixed, fps, fps_den, fps_num),
             new Size(sar_width, sar_height),
             new Size(codec_width, codec_height),
