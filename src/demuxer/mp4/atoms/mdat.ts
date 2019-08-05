@@ -6,12 +6,16 @@ const {log, warn} = getLogger('Mdat');
 
 export class Mdat extends Atom {
 
+    public data: Uint8Array = null;
+
     public static parse(data: Uint8Array): Atom {
         const mdat: Mdat = new Mdat(Atom.mdat, data.byteLength);
-        Mdat.parsePayload(data);
+        mdat.data = data;
+        //Mdat.parsePayload(data);
         return mdat;
     }
 
+    /*
     private static parsePayload(data: Uint8Array): void {
         let length: number;
         for (let i: number = 0; i + 4 < data.byteLength; i += length) {
@@ -31,4 +35,5 @@ export class Mdat extends Atom {
             // TODO: do something
         }
     }
+    */
 }
