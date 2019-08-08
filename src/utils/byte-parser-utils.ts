@@ -46,10 +46,25 @@ export default class ByteParserUtils {
         return value;
     }
 
-    public static parseUint(buffer: Uint8Array, offset: number, len: number): number {
+    public static parseUint(buffer: Uint8Array, offset: number, len: number, allowOverflow: boolean = true): number {
         let value: number = 0;
-        for (let i: number = 0; i < len; i++) {
+        let safeValue: number = 0;
+        // we need to walk-back instead of iterating up because otherwise the value-checking to prevent overflow will not work
+        for (let i: number = len - 1; i >= 0; i--) {
             value |= (buffer[offset + i] << ((len - i - 1) * 8)) >>> 0;
+            if (!allowOverflow) {
+                /**
+                 * NOTE: In JS engines, usually numbers are stored in 32-bit registers using signed types. That leaves 31 bits for the actual value.
+                 * As we write into this variable and shift bits, it is to be expected that overflow will happen when we have a number exceeded 2^31 stored inside this buffer.
+                 * We are detecting this via this method of storing the last "safe" value and detecting overflow by comparison (it will be either less in positive value or negative then).
+                 * The only thing we can do atm is throw this error and bailing out from any use-cases needing actually large numbers as this.
+                 * TODO: any solution to handle large 64 bits values
+                 */
+                if (value < safeValue) {
+                    throw new Error(`Error parsing ${len} bytes-long unsigned integer from buffer: value overflow/wrap-around from previously ${safeValue} to falsely ${value} at byte-index ${i}`)
+                }
+                safeValue = value;
+            }
         }
         return value;
     }
