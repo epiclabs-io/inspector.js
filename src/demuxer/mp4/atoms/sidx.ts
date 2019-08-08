@@ -29,8 +29,8 @@ export class Sidx extends Atom {
             sidx.firstOffset = ByteParserUtils.parseUint32(data, 16);
             offset = 20;
         } else {
-            sidx.earliestPresentationTime = ByteParserUtils.parseLong64(data, 12);
-            sidx.firstOffset = ByteParserUtils.parseLong64(data, 20);
+            sidx.earliestPresentationTime = ByteParserUtils.parseUint64(data, 12);
+            sidx.firstOffset = ByteParserUtils.parseUint64(data, 20);
             offset = 28;
         }
 

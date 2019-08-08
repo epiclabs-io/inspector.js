@@ -62,8 +62,8 @@ export default class ByteParserUtils {
         return ByteParserUtils.parseUint(buffer, offset, 4);
     }
 
-    public static parseLong64(buffer: Uint8Array, offset: number): number {
-        return ByteParserUtils.parseUint(buffer, offset, 8);
+    public static parseUint64(buffer: Uint8Array, offset: number): number {
+        return ByteParserUtils.parseUint(buffer, offset, 8, false); // do NOT allow internal value wrap-over on assumed 64-bit values
     }
 
     public static parseIsoBoxType(buffer: Uint8Array, offset: number): string {

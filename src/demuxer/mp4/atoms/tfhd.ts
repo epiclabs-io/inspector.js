@@ -24,7 +24,7 @@ export class Tfhd extends Atom {
 
         let offset: number = 8;
         if (baseDataOffsetPresent) {
-            tfhd.baseDataOffset = ByteParserUtils.parseLong64(data, 12);
+            tfhd.baseDataOffset = ByteParserUtils.parseUint64(data, 12);
             offset += 8;
         }
         if (sampleDescriptionIndexPresent) {
