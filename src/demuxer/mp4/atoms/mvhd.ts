@@ -30,10 +30,11 @@ export class Mvhd extends Atom {
             mvhd.creationTime = ByteParserUtils.parseIsoBoxDate(ByteParserUtils.parseUint32(data, offset));
             offset += 8;
             mvhd.modificationTime = ByteParserUtils.parseIsoBoxDate(ByteParserUtils.parseUint32(data, offset));
-            offset += 4;
-            mvhd.timescale = ByteParserUtils.parseUint32(data, offset);
             offset += 8;
+            mvhd.timescale = ByteParserUtils.parseUint32(data, offset);
+            offset += 4;
             mvhd.duration = ByteParserUtils.parseUint32(data, offset);
+            offset += 8;
         } else {
             mvhd.creationTime = ByteParserUtils.parseIsoBoxDate(ByteParserUtils.parseUint32(data, offset));
             offset += 4;
@@ -42,8 +43,8 @@ export class Mvhd extends Atom {
             mvhd.timescale = ByteParserUtils.parseUint32(data, offset);
             offset += 4;
             mvhd.duration = ByteParserUtils.parseUint32(data, offset);
+            offset += 4;
         }
-        offset += 4;
         mvhd.rate = ByteParserUtils.parseUint16(data, offset) +
             ByteParserUtils.parseUint16(data, offset + 2) / 16;
         offset += 4;
