@@ -81,10 +81,19 @@ export class Mp4Demuxer implements IDemuxer {
 
         let dataOffset: number = offset;
         while (dataOffset < data.byteLength) {
-            const size: number = ByteParserUtils.parseUint32(data, dataOffset);
+            let size: number = ByteParserUtils.parseUint32(data, dataOffset);
             const type: string = ByteParserUtils.parseIsoBoxType(data, dataOffset + 4);
-            const end: number = size > 1 ? dataOffset + size : data.byteLength;
-            const boxData: Uint8Array = data.subarray(dataOffset + 8, end);
+
+            let boxDataOffset: number = dataOffset + 8;
+            if (size === 1) {
+                size = ByteParserUtils.parseUint64(data, boxDataOffset)
+                boxDataOffset = dataOffset + 16;
+            } else if (size === 0) {
+                size = data.byteLength;
+            }
+
+            const end: number = dataOffset + size;
+            const boxData: Uint8Array = data.subarray(boxDataOffset, end);
 
             // parse
             let atom: Atom;
@@ -117,6 +126,7 @@ export class Mp4Demuxer implements IDemuxer {
     }
 
     private _processAtom(atom: Atom, dataOffset: number): void {
+
         switch (atom.type) {
 
             // FIXME !!! `trex` box can contain super based set of default sample-duration/flags/size ...
@@ -244,8 +254,7 @@ export class Mp4Demuxer implements IDemuxer {
                 this.lastSampleTable.chunkOffsetBox = atom as Stco;
                 break;
 
-            // Sample data ...
-
+            // payload data
             case Atom.mdat:
                 // in plain old MOV the moov may be at the end of the file (and mdat before)
                 if (this._getLastTrackCreated()) {
