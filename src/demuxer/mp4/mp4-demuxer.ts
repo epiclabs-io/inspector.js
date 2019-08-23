@@ -135,10 +135,7 @@ export class Mp4Demuxer implements IDemuxer {
             case Atom.trak:
 
                 this._digestSampleTable();
-                this.lastTrackId = -1;
-                this.lastTimescale = null;
-                this.lastCodecDataAtom = null;
-                this.lastAudioVideoAtom = null;
+                this._resetLastTrackInfos();
 
             case Atom.ftyp:
             case Atom.moov:
@@ -151,6 +148,7 @@ export class Mp4Demuxer implements IDemuxer {
             // Moov box / "initialization"-data and SIDX
 
             case Atom.sidx:
+                // FIXME: this isn't very nice
                 this._attemptCreateUnknownTrack();
                 this._getLastTrackCreated().setSidxAtom(atom);
                 break;
@@ -231,27 +229,27 @@ export class Mp4Demuxer implements IDemuxer {
                 break;
             case Atom.stts:
                 this._haveSampleTable();
-                this.lastSampleTable.decodingTimestamps = atom as Stts;
+                this.lastSampleTable && (this.lastSampleTable.decodingTimestamps = atom as Stts);
                 break;
             case Atom.stss:
                 this._haveSampleTable();
-                this.lastSampleTable.syncSamples = atom as Stss;
+                this.lastSampleTable && (this.lastSampleTable.syncSamples = atom as Stss);
                 break;
             case Atom.ctts:
                 this._haveSampleTable();
-                this.lastSampleTable.compositionTimestampOffsets = atom as Ctts;
+                this.lastSampleTable && (this.lastSampleTable.compositionTimestampOffsets = atom as Ctts);
                 break;
             case Atom.stsc:
                 this._haveSampleTable();
-                this.lastSampleTable.samplesToChunkBox = atom as Stsc;
+                this.lastSampleTable && (this.lastSampleTable.samplesToChunkBox = atom as Stsc);
                 break;
             case Atom.stsz:
                 this._haveSampleTable();
-                this.lastSampleTable.sampleSizes = atom as Stsz;
+                this.lastSampleTable && (this.lastSampleTable.sampleSizes = atom as Stsz);
                 break;
             case Atom.stco:
                 this._haveSampleTable();
-                this.lastSampleTable.chunkOffsetBox = atom as Stco;
+                this.lastSampleTable && (this.lastSampleTable.chunkOffsetBox = atom as Stco);
                 break;
 
             // payload data
@@ -271,7 +269,13 @@ export class Mp4Demuxer implements IDemuxer {
         if (this.lastSampleTable) {
             return;
         }
-        this.lastSampleTable = new Mp4SampleTable(this._getLastTrackCreated());
+        if (!this._getLastTrackCreated() || this._getLastTrackCreated().isOther()) {
+            this._attemptCreateUnknownTrack();
+            warn('not unpacking sample table for unknown track');
+        } else { // we only create a sample table representation for known track types
+            this.lastSampleTable = new Mp4SampleTable(this._getLastTrackCreated());
+        }
+
     }
 
 
@@ -316,7 +320,9 @@ export class Mp4Demuxer implements IDemuxer {
     private _attemptCreateUnknownTrack(): void {
         if (!this.lastTrackId || !this.tracks[this.lastTrackId]) {
             warn('creating unknown-typed track');
-            this.lastTrackId = 1;
+            if (this.lastTrackId <= 0) {
+                this.lastTrackId = 1
+            }
             this.tracks[this.lastTrackId] = new Mp4Track(
                 this.lastTrackId,
                 Track.TYPE_UNKNOWN,
@@ -332,8 +338,13 @@ export class Mp4Demuxer implements IDemuxer {
      * Should be called everytime we create a track
      */
     private _resetLastTrackInfos() {
-        this.lastTrackId = 0;
+        this.lastTrackId = -1;
         this.lastTrackDataOffset = -1;
+        this.lastSampleTable = null;
+        this.lastCodecDataAtom = null;
+        this.lastTimescale = null;
+        this.lastCodecDataAtom = null;
+        this.lastAudioVideoAtom = null;
     }
 
     private _getLastTrackCreated(): Mp4Track {
