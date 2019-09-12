@@ -29,7 +29,7 @@ import { Mp4SampleTable } from './mp4-sample-table';
 import { Esds } from './atoms/esds';
 import { Mvhd } from './atoms/mvhd';
 
-const {log, warn} = getLogger('Mp4Demuxer', LoggerLevels.ON);
+const {log, warn} = getLogger('Mp4Demuxer', LoggerLevels.OFF);
 
 export class Mp4Demuxer implements IDemuxer {
     public tracks: TracksHash = {};
