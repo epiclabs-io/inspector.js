@@ -191,9 +191,27 @@ export class H264ParameterSetParser {
                 fps_fixed = gb.readBool();
 
                 fps_num = time_scale;
-                fps_den = num_units_in_tick * 2;
+                fps_den = num_units_in_tick;
                 fps = fps_num / fps_den;
             }
+
+            /*
+                sps->timing_info_present_flag = get_bits1(gb);
+                if (sps->timing_info_present_flag) {
+                    unsigned num_units_in_tick = get_bits_long(gb, 32);
+                    unsigned time_scale        = get_bits_long(gb, 32);
+                    if (!num_units_in_tick || !time_scale) {
+                        av_log(avctx, AV_LOG_ERROR,
+                            "time_scale/num_units_in_tick invalid or unsupported (%u/%u)\n",
+                            time_scale, num_units_in_tick);
+                        sps->timing_info_present_flag = 0;
+                    } else {
+                        sps->num_units_in_tick = num_units_in_tick;
+                        sps->time_scale = time_scale;
+                    }
+                    sps->fixed_frame_rate_flag = get_bits1(gb);
+                }
+            */
         }
 
         let sarScale: number = 1;

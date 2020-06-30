@@ -23,13 +23,11 @@ import { Stss } from './atoms/stss';
 import { Stco } from './atoms/stco';
 import { Mdhd } from './atoms/mdhd';
 
-import {getLogger, LoggerLevels} from '../../utils/logger';
-
 import { Mp4SampleTable } from './mp4-sample-table';
 import { Esds } from './atoms/esds';
 import { Mvhd } from './atoms/mvhd';
 
-const {log, warn} = getLogger('Mp4Demuxer', LoggerLevels.OFF);
+const {log, warn} = console;
 
 export class Mp4Demuxer implements IDemuxer {
     public tracks: TracksHash = {};
