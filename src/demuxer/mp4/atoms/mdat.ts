@@ -1,8 +1,5 @@
 import ByteParserUtils from '../../../utils/byte-parser-utils';
 import { Atom } from './atom';
-import {getLogger} from '../../../utils/logger';
-
-const {log, warn} = getLogger('Mdat');
 
 export class Mdat extends Atom {
 

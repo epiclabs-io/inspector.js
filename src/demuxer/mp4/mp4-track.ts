@@ -11,10 +11,7 @@ import { Sidx } from './atoms/sidx';
 import { Trun, SampleFlags } from './atoms/trun';
 import { Avc1 } from './atoms/avc1';
 
-import { getLogger, LoggerLevels } from '../../utils/logger';
 import { toMicroseconds } from '../../utils/timescale';
-
-const {debug, warn} = getLogger('Mp4Track', LoggerLevels.WARN);
 
 export type Mp4TrackDefaults = {
   sampleDuration: number;
@@ -175,7 +172,7 @@ export class Mp4Track extends Track {
             const timescale: number = this.sidx ? this.sidx.timescale : this.getTimescale();
 
             if (!this.sidx) {
-                warn('No sidx found, using parent timescale:', timescale);
+                //warn('No sidx found, using parent timescale:', timescale);
             }
 
             const sampleRunDataOffset: number = trun.dataOffset + this.getFinalSampleDataOffset();
@@ -192,7 +189,7 @@ export class Mp4Track extends Track {
 
                 const flags = sample.flags || this.defaultSampleFlagsParsed;
                 if (!flags) {
-                    warn('no default sample flags in track sample-run');
+                    //warn('no default sample flags in track sample-run');
                     // in fact the trun box parser should provide a fallback instance of flags in this case
                     //throw new Error('Invalid file, sample has no flags');
                 }
@@ -217,7 +214,7 @@ export class Mp4Track extends Track {
 
                 this.appendFrame(newFrame);
 
-                debug(`frame: @ ${newFrame.timeUs} [us] -> ${newFrame.bytesOffset} / ${newFrame.size}`)
+                //debug(`frame: @ ${newFrame.timeUs} [us] -> ${newFrame.bytesOffset} / ${newFrame.size}`)
 
                 bytesOffset += sample.size;
             }

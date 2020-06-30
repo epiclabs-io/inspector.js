@@ -10,10 +10,6 @@ import { Frame } from '../frame';
 
 import { toMicroseconds } from '../../utils/timescale';
 
-import {getLogger, LoggerLevels} from '../../utils/logger';
-
-const {log, debug} = getLogger('Mp4SampleTable', LoggerLevels.OFF);
-
 export class Mp4SampleTable {
     decodingTimestamps: Stts;
     compositionTimestampOffsets: Ctts;
@@ -31,7 +27,7 @@ export class Mp4SampleTable {
 
     digest() {
 
-        debug('digesting sample table');
+        //debug('digesting sample table');
 
         let dts = 0;
         let frameCount = 0;
@@ -143,6 +139,6 @@ export class Mp4SampleTable {
             this._track.appendFrame(frame)
         });
 
-        log(frames)
+        //log(frames)
     }
 };
