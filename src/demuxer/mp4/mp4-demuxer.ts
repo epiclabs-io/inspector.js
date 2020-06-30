@@ -27,7 +27,7 @@ import { Mp4SampleTable } from './mp4-sample-table';
 import { Esds } from './atoms/esds';
 import { Mvhd } from './atoms/mvhd';
 
-const log = () => void 0; // console.log.bind(console);
+const log = (...msg: any[]) => void 0; // console.log.bind(console);
 const warn = console.warn.bind(console);
 
 export class Mp4Demuxer implements IDemuxer {
