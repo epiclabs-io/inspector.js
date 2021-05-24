@@ -72,10 +72,6 @@ const config = {
                 // map already include everything for debugging
                 declaration: false,
             }
-        }, {
-            test: /\.scss$/,
-            loaders: ['style-loader', 'css-loader', 'sass-loader'],
-            exclude: /node_modules/
         }]
     }
 };

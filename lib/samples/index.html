@@ -14,11 +14,24 @@
       font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif
     }
 
-    #atoms {
+    #atoms-info {
       margin-top: 20px;
       background-color: #94bf1e;
       color: #ffffff;
       border: 1px solid black;
+      display: flex;
+    }
+
+    .atom_column {
+      flex: 50%;
+    }
+
+    #atoms li {
+      cursor: pointer;
+    }
+
+    #details {
+      background-color: #000000;
     }
 
     #tracks {
@@ -35,18 +48,33 @@
       <option value="https://video-dev.github.io/streams/x36xhzz/url_0/url_462/193039199_mp4_h264_aac_hd_7.ts">TS Segment</option>
       <option value="http://multiplatform-f.akamaihd.net/i/multi/will/bunny/big_buck_bunny_,640x360_400,640x360_700,640x360_1000,950x540_1500,.f4v.csmil/segment2_0_av.ts">Another TS Segment</option>
       <option value="https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_480x270_600k/bbb_30fps_480x270_600k_0.m4v">MP4 Init Segment</option>
-      <option value="https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_480x270_600k/bbb_30fps_480x270_600k_1.m4v">MP4 chunk</option>
+      <option value="https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_480x270_600k/bbb_30fps_480x270_600k_1.m4v">MP4 Segment</option>
+      <option value="https://media.axprod.net/TestVectors/v7-Clear/8/init.mp4">MP4 Init Segment H265</option>
+      <option value="https://media.axprod.net/TestVectors/v7-Clear/8/0001.m4s">MP4 Segment H265</option>
       <option value="http://well-to-do-view.surge.sh/big-buck-bunny_trailer.webm">WebM file</option>
+      <option value="https://storage.googleapis.com/shaka-demo-assets/sintel-webm-only/v-0240p-0300k-vp9.webm">WebM video segment of DASH stream</option>
+      <option value="https://storage.googleapis.com/shaka-demo-assets/sintel-webm-only/a-eng-0128k-libopus.webm">WebM audio segment of DASH stream</option>
+      <option value="http://127.0.0.1:8081/sample_1500.mp4">Sample</option>
+      
     </select>
     <input type="button" value="Inspect" onclick="inspectMedia()">
   </div>
 
-  <div id="atoms"></div>
+  <div id="atoms-info">
+    <div id="atoms" class="atom_column">
+    </div>
+    <div id="details" class="atom_column">
+    </div>
+  </div>
 
   <div id="tracks"></div>
 
   <script>
     function inspectMedia() {
+      clearTracksInfo();
+      clearAtomsTree();
+      clearAtomDetails();
+
       var mediaUrl = document.getElementById("mediaUrl").value;
       if (!mediaUrl) return;
 
@@ -85,12 +113,6 @@
 
     function updateTracksInfo(demuxer) {
       var el = document.getElementById('tracks');
-
-      // Remove any child of tracks element
-      while (el.firstChild) {
-        el.removeChild(el.firstChild);
-      }
-
       for (var trackId in demuxer.tracks) {
         addTrackInfo(el, demuxer.tracks[trackId]);
       }
@@ -116,14 +138,11 @@
     }
 
     function updateAtomsInfo(demuxer) {
-      var el = document.getElementById('atoms');
-
-      // Remove any child of tracks element
-      while (el.firstChild) {
-        el.removeChild(el.firstChild);
+      // Only makes sense for MP4 files
+      if (demuxer.atoms) {
+        var el = document.getElementById('atoms');
+        addAtoms(el, demuxer.atoms);
       }
-
-      addAtoms(el, demuxer.atoms);
     }
 
     // Add information about MP4 atoms
@@ -134,6 +153,7 @@
       for (var atom of atoms) {
         var atomEl = document.createElement('li');
         atomEl.innerHTML = atom.type + ', ' + atom.size + ' bytes';
+        atomEl.onclick = renderAtomDetails.bind(null, atom);
         containerEl.appendChild(atomEl);
 
         if (atom.atoms && atom.atoms.length > 0) {
@@ -142,6 +162,53 @@
       }
 
       parent.appendChild(containerEl);
+    }
+
+    function renderAtomDetails(atom, event) {
+      event.stopPropagation();
+      var el = document.getElementById('details');
+      clearAtomDetails();
+
+      var containerEl = document.createElement('ul');
+      for (var p in atom) {
+        if (atom.hasOwnProperty(p) && shouldRenderAtom(p, atom)) {
+          var item = document.createElement('li');
+          item.innerHTML = p + ":" + atom[p];
+          containerEl.appendChild(item);
+        }
+      }
+
+      el.appendChild(containerEl);
+    }
+
+    function clearTracksInfo() {
+      var el = document.getElementById('tracks');
+
+      // Remove any child of tracks element
+      while (el.firstChild) {
+        el.removeChild(el.firstChild);
+      }
+    }
+
+    function clearAtomsTree() {
+      var el = document.getElementById('atoms');
+
+      // Remove any child of tracks element
+      while (el.firstChild) {
+        el.removeChild(el.firstChild);
+      }
+    }
+
+    function clearAtomDetails() {
+      var el = document.getElementById('details');
+      while (el.firstChild) {
+        el.removeChild(el.firstChild);
+      }
+    }
+
+    function shouldRenderAtom(p, atom) {
+      return p !== 'atoms' && p !== 'containerDataOffset' && p !== 'constructor';
+        //&& !Array.isArray(atom[p]);
     }
   </script>
 </body>
