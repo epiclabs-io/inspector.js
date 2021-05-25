@@ -80,6 +80,8 @@ export class Atom {
     public static mfhd: string = 'mfhd';
     public static emsg: string = 'emsg';
 
+    public isCompleted: boolean = false;
+    
     constructor (public type: string, public size: number) {
     }
 

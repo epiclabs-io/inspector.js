@@ -54,7 +54,7 @@ export class Mp4Demuxer implements IDemuxer {
             const type: string = ByteParserUtils.parseIsoBoxType(data, dataOffset + 4);
             const end: number = size > 1 ? dataOffset + size : data.byteLength;
             const boxData: Uint8Array = data.subarray(dataOffset + 8, end);
-
+            
             // parse
             let atom: Atom;
             if (boxesParsers[type]) {
@@ -70,6 +70,7 @@ export class Mp4Demuxer implements IDemuxer {
                     atom = new Atom(type, boxData.byteLength);
                 }
             }
+            atom.isCompleted = dataOffset + size < data.byteLength;
 
             if (atom instanceof ContainerAtom) {
                 (atom as ContainerAtom).atoms = this.parseAtoms(boxData, (atom as ContainerAtom).containerDataOffset);
