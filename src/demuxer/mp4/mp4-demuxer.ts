@@ -174,7 +174,7 @@ export class Mp4Demuxer implements IDemuxer {
                 Track.TYPE_UNKNOWN,
                 Track.MIME_TYPE_UNKNOWN,
                 null,
-                this.lastTrackDataOffset
+                this.lastTrackDataOffset >= 0 ? this.lastTrackDataOffset  : 0
               );
               //this.resetLastTrackInfos();
         }

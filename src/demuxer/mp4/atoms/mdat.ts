@@ -10,6 +10,7 @@ export class Mdat extends Atom {
     }
 
     private static parsePayload(data: Uint8Array): void {
+        /*
         let length: number;
         for (let i: number = 0; i + 4 < data.byteLength; i += length) {
             length = ByteParserUtils.parseUint32(data, i);
@@ -23,5 +24,6 @@ export class Mdat extends Atom {
             const nalType: number = data[i] & 0x1F;
             // TODO: do something
         }
+        */
     }
 }

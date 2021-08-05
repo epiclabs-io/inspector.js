@@ -7,7 +7,7 @@ export class Stss extends Atom {
     public sampleNumbers: number[];
 
     public static parse(data: Uint8Array): Atom {
-        const stss: Stss = new Stss(Atom.stco, data.byteLength);
+        const stss: Stss = new Stss(Atom.stss, data.byteLength);
         stss.version = data[0];
         stss.flags = data.subarray(1, 4);
         stss.sampleNumbers = [];
