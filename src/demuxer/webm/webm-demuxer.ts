@@ -38,7 +38,6 @@ export class WebMDemuxer implements IDemuxer {
         }
 
         this.elements = this.parseElements(this.data.byteLength);
-        console.log(this.elements);
 
         if (this.dataOffset > 0) {
             this.data = this.data.subarray(this.dataOffset);

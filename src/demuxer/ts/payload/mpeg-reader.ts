@@ -116,7 +116,6 @@ export class MpegReader extends PayloadReader {
 
     private parseHeader(header: number): boolean {
         if ((header & 0xFFE00000) >>> 0 !== 0xFFE00000) {
-            console.log(header);
             return false;
         }
 
