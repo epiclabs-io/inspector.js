@@ -11,20 +11,25 @@ export class Frame {
     // normalized micros value
     private presentationTimeUs: number = 0;
 
-    // ideally have unnormalized integer values
+    // ideally have scaled integer values
     public timescale: number = NaN;
     public scaledDecodingTime: number = NaN;
     public scaledPresentationTimeOffset: number = NaN;
     public scaledDuration: number = NaN;
 
     constructor (
-        public frameType: string,
-        public timeUs: number,
-        public size: number,
-        public duration: number = NaN,
+        public readonly frameType: string,
+        public readonly timeUs: number,
+        public readonly size: number,
+        public readonly duration: number = NaN,
         public bytesOffset: number = NaN,
-        presentationTimeOffsetUs: number = 0
+        public presentationTimeOffsetUs: number = 0
     ) {
+
+        if (!Number.isFinite(size)) {
+            throw new Error('Frame has to have sample size');
+        }
+
         this.setPresentationTimeOffsetUs(presentationTimeOffsetUs);
     }
 
