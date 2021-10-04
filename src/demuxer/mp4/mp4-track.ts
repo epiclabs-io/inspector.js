@@ -198,10 +198,13 @@ export class Mp4Track extends Track {
 
                 const timeUs = this.lastPts;
 
+                const frameSize = sample.size || this.defaults.sampleSize;
+                if (!frameSize) throw new Error('Frame has to have either sample-size of trun-entry or track default');
+
                 const newFrame = new Frame(
                     flags ? (flags.isSyncFrame ? Frame.IDR_FRAME : Frame.P_FRAME) : Frame.UNFLAGGED_FRAME,
                     timeUs,
-                    sample.size,
+                    frameSize,
                     duration,
                     bytesOffset,
                     cto
