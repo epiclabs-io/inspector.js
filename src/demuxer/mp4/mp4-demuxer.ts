@@ -194,7 +194,9 @@ export class Mp4Demuxer implements IDemuxer {
             // Fragmented-mode ...
 
             case Atom.tfhd:
-                // FIXME: should be handled differently by looking at other things inside fragments and mapping eventually to previously parsed moov
+                // FIXME: should be handled differently
+                // by looking at other things inside fragments
+                // and mapping eventually to previously parsed moov
                 this._attemptCreateUnknownTrack();
                 const tfhd: Tfhd = atom as Tfhd;
                 this._getLastTrackCreated().setBaseDataOffset(tfhd.baseDataOffset);
