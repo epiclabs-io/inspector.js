@@ -25,8 +25,17 @@ export class Track {
     protected frames: Frame[] = [];
     protected duration: number = NaN;
 
-    constructor(public id: number, public type: string /* fixme: make enum type */, public mimeType: string) {
-        this.frames = [];
+    constructor(public id: number, public type: string /* fixme: make enum type */, public mimeType: string) {}
+
+    public update(): void {
+        this.frames = this.getFrames().sort((a: Frame, b: Frame): number => {
+            return a.timeUs - b.timeUs;
+        });
+        this.duration = this.getDuration();
+    }
+
+    public flush() {
+        this.frames.length = 0;
     }
 
     public isVideo() {
@@ -61,13 +70,5 @@ export class Track {
 
     public getMetadata(): {} { // FIXME: Make this a string-to-any hash
         return {};
-    }
-
-    public update(): void {
-        this.frames = this.getFrames().sort((a: Frame, b: Frame): number => {
-            return a.timeUs - b.timeUs;
-        });
-
-        this.duration = this.getDuration();
     }
 }
