@@ -44,14 +44,7 @@ export class Mp4Demuxer implements IDemuxer {
     private lastTimescale: number = null;
 
     constructor() {
-        this.atoms = [];
-        this.tracks = {};
-
         this._resetLastTrackInfos();
-    }
-
-    public getAtoms(): Atom[] {
-      return this.atoms;
     }
 
     public append(data: Uint8Array): void {
@@ -65,6 +58,19 @@ export class Mp4Demuxer implements IDemuxer {
 
     public end(): void {
         this._updateTracks();
+    }
+
+    public flush() {
+        this.atoms.length = 0;
+        for (const trackId in this.tracks) {
+            if (this.tracks.hasOwnProperty(trackId)) {
+                (this.tracks[trackId] as Mp4Track).flush();
+            }
+        }
+    }
+
+    public getAtoms(): Atom[] {
+        return this.atoms;
     }
 
     private _updateTracks(): void {
@@ -200,7 +206,7 @@ export class Mp4Demuxer implements IDemuxer {
                 this._attemptCreateUnknownTrack();
                 const tfhd: Tfhd = atom as Tfhd;
                 this._getLastTrackCreated().setBaseDataOffset(tfhd.baseDataOffset);
-                this._getLastTrackCreated().setDefaults({
+                this._getLastTrackCreated().addDefaults({
                   sampleDuration: tfhd.defaultSampleDuration,
                   sampleFlags: tfhd.defaultSampleFlags,
                   sampleSize: tfhd.defaultSampleSize
@@ -208,7 +214,9 @@ export class Mp4Demuxer implements IDemuxer {
                 break;
 
             case Atom.trun:
-                // FIXME: should be handled differently by looking at other things inside fragments and mapping eventually to previously parsed moov
+                // FIXME: should be handled differently by looking
+                // at other things inside fragments and mapping eventually
+                // to previously parsed moov (see above for tfhds)
                 this._attemptCreateUnknownTrack();
                 this._getLastTrackCreated().addTrunAtom(atom);
                 break;

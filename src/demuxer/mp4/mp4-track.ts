@@ -24,11 +24,11 @@ export class Mp4Track extends Track {
     private sidx: Sidx = null;
     private trunInfo: Trun[] = [];
     private trunInfoReadIndex: number = 0;
-    private lastPts: number = null;
-    private lastPtsUnscaledUint: number = null;
+    private lastPts: number;
+    private lastPtsUnscaledUint: number;
     private timescale: number = null;
-    private defaults: Mp4TrackDefaults = null;
-    private defaultSampleFlagsParsed: SampleFlags = null;
+    private defaults: Mp4TrackDefaults[] = [];
+    private defaultSampleFlagsParsed: (SampleFlags | null)[] = [];
     private baseDataOffset: number = 0;
 
     constructor(
@@ -48,6 +48,14 @@ export class Mp4Track extends Track {
         if (this.dataOffset < 0) {
           throw new Error('Invalid file, no sample-data base-offset can be determined');
         }
+    }
+
+    public flush() {
+        this.trunInfo.length = 0;
+        this.trunInfoReadIndex = 0;
+        this.defaults.length = 0;
+        this.defaultSampleFlagsParsed.length = 0;
+        super.flush();
     }
 
     // TODO: make this abstract on Track class
@@ -91,15 +99,17 @@ export class Mp4Track extends Track {
         this.timescale = timescale;
     }
 
-    public setDefaults(defaults: Mp4TrackDefaults) {
-        this.defaults = defaults;
+    public addDefaults(defaults: Mp4TrackDefaults) {
+        this.defaults.push(defaults);
         if (defaults.sampleFlags) {
-            this.defaultSampleFlagsParsed = Trun.parseFlags(new Uint8Array([
+            this.defaultSampleFlagsParsed.push(Trun.parseFlags(new Uint8Array([
                 defaults.sampleFlags & 0xff000000,
                 defaults.sampleFlags & 0x00ff0000,
                 defaults.sampleFlags & 0x0000ff00,
                 defaults.sampleFlags & 0x000000ff,
-            ]));
+            ])));
+        } else {
+            this.defaultSampleFlagsParsed.push(null);
         }
     }
 
@@ -163,9 +173,9 @@ export class Mp4Track extends Track {
     }
 
     public processTrunAtoms() {
-        this.trunInfo.forEach((trun: Trun, index) => {
+        this.trunInfo.forEach((trun: Trun, trunIndex) => {
 
-            if (index < this.trunInfoReadIndex) {
+            if (trunIndex < this.trunInfoReadIndex) {
               return;
             }
 
@@ -179,15 +189,16 @@ export class Mp4Track extends Track {
 
             let bytesOffset: number = sampleRunDataOffset;
 
-            for (const sample of trun.samples) {
-                const sampleDuration = sample.duration || this.defaults.sampleDuration;
+            for (let i = 0; i < trun.samples.length; i++) {
+                const sample = trun.samples[i];
+                const sampleDuration = sample.duration || this.defaults[trunIndex]?.sampleDuration;
                 if (!sampleDuration) {
                     throw new Error('Invalid file, samples have no duration');
                 }
 
                 const duration: number = toMicroseconds(sampleDuration, timescale);
 
-                const flags = sample.flags || this.defaultSampleFlagsParsed;
+                const flags = sample.flags || this.defaultSampleFlagsParsed[trunIndex];
                 if (!flags) {
                     //warn('no default sample flags in track sample-run');
                     // in fact the trun box parser should provide a fallback instance of flags in this case
@@ -198,8 +209,9 @@ export class Mp4Track extends Track {
 
                 const timeUs = this.lastPts;
 
-                const frameSize = sample.size || this.defaults.sampleSize;
+                const frameSize = sample.size || this.defaults[trunIndex]?.sampleSize;
                 if (!frameSize) throw new Error('Frame has to have either sample-size of trun-entry or track default');
+
 
                 const newFrame = new Frame(
                     flags ? (flags.isSyncFrame ? Frame.IDR_FRAME : Frame.P_FRAME) : Frame.UNFLAGGED_FRAME,
@@ -219,7 +231,7 @@ export class Mp4Track extends Track {
 
                 //debug(`frame: @ ${newFrame.timeUs} [us] -> ${newFrame.bytesOffset} / ${newFrame.size}`)
 
-                bytesOffset += sample.size;
+                bytesOffset += frameSize;
             }
         })
 
