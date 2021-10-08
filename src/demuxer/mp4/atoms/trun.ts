@@ -28,9 +28,9 @@ export class Sample {
 export class Trun extends Atom {
     public version: number;
     public flags: Uint8Array;
-    public trackId: number;
-    public dataOffset: number;
-    public samples: Sample[];
+    public trackId: number; // fixme: not used, why?
+    public dataOffset: number = 0;
+    public samples: Sample[] = [];
 
     public static parse(data: Uint8Array): Atom {
         const trun: Trun = new Trun(Atom.trun, data.byteLength);
@@ -46,8 +46,7 @@ export class Trun extends Atom {
 
         let sampleCount: number = ByteParserUtils.parseUint32(data, 4);
         let offset: number = 8;
-        trun.samples = [];
-        let totalSize: number = 0;
+        let totalSizeOfSamples: number = 0; // for debug/test
         if (dataOffsetPresent) {
             trun.dataOffset = ByteParserUtils.parseUint32(data, offset);
             offset += 4;
@@ -62,7 +61,7 @@ export class Trun extends Atom {
             }
             if (sampleSizePresent) {
                 sample.size = ByteParserUtils.parseUint32(data, offset);
-                totalSize += sample.size;
+                totalSizeOfSamples += sample.size;
                 offset += 4;
             }
             if (sampleCompositionTimeOffsetPresent) {
@@ -80,7 +79,7 @@ export class Trun extends Atom {
             }
             if (sampleSizePresent) {
                 sample.size = ByteParserUtils.parseUint32(data, offset);
-                totalSize += sample.size;
+                totalSizeOfSamples += sample.size;
                 offset += 4;
             }
             if (sampleFlagsPresent) {
