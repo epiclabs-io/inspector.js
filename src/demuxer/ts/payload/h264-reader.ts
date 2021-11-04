@@ -62,8 +62,6 @@ export class H264Reader extends PayloadReader {
     public pps: boolean;
     public pendingBytes: number;
 
-    private frameBytesOffset: number;
-
     constructor() {
         super();
         this.pendingBytes = 0;
@@ -80,7 +78,6 @@ export class H264Reader extends PayloadReader {
             if (this.dataBuffer.byteLength > 0) {
                 const offset: number = this.findNextNALUnit(0);
                 if (offset < this.dataBuffer.byteLength) {
-                    this.frameBytesOffset = this.getFirstPacketDataOffset() + this.dataOffset + offset;
                     this.processNALUnit(offset, this.dataBuffer.byteLength, this.dataBuffer[offset + 3] & 0x1F);
                 }
             }
@@ -109,7 +106,6 @@ export class H264Reader extends PayloadReader {
         if (this.pendingBytes > 0) {
             nextNalUnit = this.findNextNALUnit(this.pendingBytes);
             if (nextNalUnit < this.dataBuffer.byteLength) {
-                this.frameBytesOffset = this.getFirstPacketDataOffset() + this.dataOffset + 0;
                 this.processNALUnit(0, nextNalUnit, this.dataBuffer[offset + 3] & 0x1F);
                 offset = nextNalUnit;
             }
@@ -126,12 +122,12 @@ export class H264Reader extends PayloadReader {
         if (this.dataBuffer.byteLength > 0) {
             while (nextNalUnit < this.dataBuffer.byteLength) {
                 nextNalUnit = this.findNextNALUnit(offset + 3);
-                this.frameBytesOffset = this.getFirstPacketDataOffset() + this.dataOffset + offset;
-                this.processNALUnit(offset, nextNalUnit, this.dataBuffer[offset + 3] & 0x1F);
-                offset = nextNalUnit;
+                if (nextNalUnit < this.dataBuffer.byteLength) {
+                    this.processNALUnit(offset, nextNalUnit, this.dataBuffer[offset + 3] & 0x1F);
+                    offset = nextNalUnit;
+                }
             }
 
-            this.dataOffset += offset;
             this.dataBuffer = this.dataBuffer.subarray(offset);
             this.pendingBytes = this.dataBuffer.byteLength;
         }
@@ -247,7 +243,7 @@ export class H264Reader extends PayloadReader {
     }
 
     private addNewFrame(frameType: string, frameSize: number, duration: number): void {
-        const frame = new Frame(frameType, this.timeUs, frameSize, duration, this.frameBytesOffset);
+        const frame = new Frame(frameType, this.timeUs, frameSize, duration);
         this.frames.push(frame);
     }
 
