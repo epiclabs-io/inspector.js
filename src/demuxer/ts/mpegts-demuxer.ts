@@ -63,6 +63,7 @@ export class MpegTSDemuxer implements IDemuxer {
             }
         }
         this.data = null;
+        this.dataOffset = 0;
     }
 
     private parse(): void {
