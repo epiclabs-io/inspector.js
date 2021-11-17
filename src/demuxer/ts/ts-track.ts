@@ -6,7 +6,9 @@ import { AdtsReader } from './payload/adts-reader';
 import { Sps } from '../../codecs/h264/nal-units';
 
 export class TSTrack extends Track {
-    constructor(id: number, type: string, mimeType: string, public pes: PESReader) {
+    constructor(id: number, type: string, mimeType: string,
+        public pes: PESReader) {
+
         super(id, type, mimeType);
     }
 
