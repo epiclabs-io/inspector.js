@@ -72,7 +72,7 @@ export class H264Reader extends PayloadReader {
     }
 
     public flush(pts: number): void {
-        if (this.dataBuffer.byteLength > 0) {
+        if (this.dataBuffer && this.dataBuffer.byteLength > 0) {
             this.consumeData(pts);
 
             if (this.dataBuffer.byteLength > 0) {
