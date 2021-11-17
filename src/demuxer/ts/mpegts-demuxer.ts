@@ -140,7 +140,7 @@ export class MpegTSDemuxer implements IDemuxer {
     }
 
     private readSamples(): void {
-        while (this.dataOffset < this.data.byteLength - 1) {
+        while (this.data && this.dataOffset < this.data.byteLength - 1) {
             const byteRead: number = this.data[this.dataOffset++];
 
             if (byteRead === MpegTSDemuxer.MPEGTS_SYNC
