@@ -39,10 +39,10 @@ export class MpegTSDemuxer implements IDemuxer {
             this.dataOffset = 0;
         } else {
             const newLen: number = this.data.byteLength + data.byteLength;
-            const temp: Uint8Array = new Uint8Array(newLen);
-            temp.set(this.data, 0);
-            temp.set(data, this.data.byteLength);
-            this.data = temp;
+            const newBuffer: Uint8Array = new Uint8Array(newLen);
+            newBuffer.set(this.data, 0);
+            newBuffer.set(data, this.data.byteLength);
+            this.data = newBuffer;
         }
 
         this.parse();
