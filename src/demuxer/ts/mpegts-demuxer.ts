@@ -66,6 +66,8 @@ export class MpegTSDemuxer implements IDemuxer {
         this.dataOffset = 0;
     }
 
+    public onPmtParsed() {};
+
     private parse(): void {
         this.findContainerType();
 
@@ -239,5 +241,6 @@ export class MpegTSDemuxer implements IDemuxer {
             }
         }
         this.pmtParsed = true;
+        this.onPmtParsed();
     }
 }
