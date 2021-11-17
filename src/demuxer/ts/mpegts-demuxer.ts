@@ -175,9 +175,9 @@ export class MpegTSDemuxer implements IDemuxer {
         }
         if (adaptationField === 1 || adaptationField === 3) {
             if (pid === 0) {
-                this.parseProgramId(payloadUnitStartIndicator, packetParser);
+                this.parseProgramAllocationTable(payloadUnitStartIndicator, packetParser);
             } else if (pid === this.pmtId) {
-                this.parseProgramTable(payloadUnitStartIndicator, packetParser);
+                this.parseProgramMapTable(payloadUnitStartIndicator, packetParser);
             } else {
                 const track: TSTrack = this.tracks[pid] as TSTrack;
                 if (track && track.pes) {
@@ -187,7 +187,7 @@ export class MpegTSDemuxer implements IDemuxer {
         }
     }
 
-    private parseProgramId(payloadUnitStartIndicator: boolean, packetParser: BitReader): void {
+    private parseProgramAllocationTable(payloadUnitStartIndicator: boolean, packetParser: BitReader): void {
         if (payloadUnitStartIndicator) {
             packetParser.skipBytes(packetParser.readByte());
         }
@@ -195,7 +195,7 @@ export class MpegTSDemuxer implements IDemuxer {
         this.pmtId = packetParser.readBits(13);
     }
 
-    private parseProgramTable(payloadUnitStartIndicator: boolean, packetParser: BitReader): void {
+    private parseProgramMapTable(payloadUnitStartIndicator: boolean, packetParser: BitReader): void {
         if (payloadUnitStartIndicator) {
             packetParser.skipBytes(packetParser.readByte());
         }
