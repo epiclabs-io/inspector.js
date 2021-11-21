@@ -52,7 +52,11 @@ export class MpegTSDemuxer implements IDemuxer {
         this.parse();
 
         if (this.dataOffset > 0) {
-            this.data = this.data.subarray(this.dataOffset);
+            if (this.dataOffset < this.data.byteLength) {
+                this.data = this.data.subarray(this.dataOffset);
+            } else {
+                this.data = null;
+            }
             this.dataOffset = 0;
         }
 
