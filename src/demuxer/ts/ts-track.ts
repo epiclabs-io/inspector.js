@@ -20,10 +20,11 @@ export class TSTrack extends Track {
     }
 
     public getFrames(): Frame[] {
-        if (this.pes && this.pes.payloadReader) {
-            return this.pes.payloadReader.frames;
-        }
-        return [];
+        return this?.pes?.payloadReader.frames || [];
+    }
+
+    public popFrames(): Frame[] | null {
+        return this?.pes?.payloadReader.popFrames() || null;
     }
 
     public getMetadata(): {} {

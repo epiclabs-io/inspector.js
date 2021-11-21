@@ -35,7 +35,7 @@ export abstract class PayloadReader {
     }
 
     public reset(): void {
-        this.frames = [];
+        this.frames.length = 0;
         this.dataOffset = 0;
         this.firstTimestamp = -1;
         this.timeUs = -1;
@@ -47,6 +47,12 @@ export abstract class PayloadReader {
             this.dataBuffer = null;
         }
         this.dataOffset = 0;
+    }
+
+    public popFrames(): Frame[] {
+        const frames = this.frames.slice(0);
+        this.frames.length = 0;
+        return frames;
     }
 
     public abstract consumeData(pts: number): void;
