@@ -32,6 +32,10 @@ export class MpegTSDemuxer implements IDemuxer {
         this.tracks = {};
     }
 
+    get currentBufferSize(): number {
+        return this?.data.byteLength || 0;
+    }
+
     public append(data: Uint8Array): void {
         if (!this.data || this.data.byteLength === 0
             || this.dataOffset >= this.data.byteLength) {
