@@ -13,22 +13,19 @@ export class TSTrack extends Track {
     }
 
     public getDuration(): number {
-        if (this.pes && this.pes.payloadReader) {
-            return this.pes.payloadReader.getDuration();
-        }
-        return 0;
+        return this?.pes?.payloadReader.getDuration() || 0;
     }
 
     public getFrames(): Frame[] {
         return this?.pes?.payloadReader.frames || [];
     }
 
-    public popFrames(): Frame[] | null {
-        return this?.pes?.payloadReader.popFrames() || null;
+    public popFrames(): Frame[] {
+        return this?.pes?.payloadReader.popFrames() || [];
     }
 
     public getMetadata(): {} {
-        if (this.pes && this.pes.payloadReader) {
+        if (this?.pes.payloadReader) {
             if (this.pes.payloadReader instanceof H264Reader && (this.pes.payloadReader as H264Reader).sps) {
                 const sps: Sps = (this.pes.payloadReader as H264Reader).sps;
                 return {
