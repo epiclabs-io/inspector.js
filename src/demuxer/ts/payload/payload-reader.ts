@@ -50,6 +50,9 @@ export abstract class PayloadReader {
     }
 
     public popFrames(): Frame[] {
+        if (this.frames.length === 0) {
+            return this.frames;
+        }
         const frames = this.frames.slice(0);
         this.frames.length = 0;
         return frames;
