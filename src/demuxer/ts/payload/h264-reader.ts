@@ -71,9 +71,9 @@ export class H264Reader extends PayloadReader {
         return Track.MIME_TYPE_AVC;
     }
 
-    public flush(pts: number): void {
+    public flush(timeUs: number): void {
         if (this.dataBuffer && this.dataBuffer.byteLength > 0) {
-            this.consumeData(pts);
+            this.consumeData(timeUs);
 
             if (this.dataBuffer.byteLength > 0) {
                 const offset: number = this.findNextNALUnit(0);
@@ -91,13 +91,13 @@ export class H264Reader extends PayloadReader {
         this.pps = false;
     }
 
-    public consumeData(pts: number): void {
+    public consumeData(timeUs: number): void {
 
         if (!this.dataBuffer) {
             return;
         }
         if (this.firstTimestamp === -1) {
-            this.timeUs = this.firstTimestamp = pts;
+            this.timeUs = this.firstTimestamp = timeUs;
         }
 
         // process any possible remaining data
@@ -115,8 +115,8 @@ export class H264Reader extends PayloadReader {
         }
 
         // process next nal units in the buffer
-        if (pts !== -1) {
-            this.timeUs = pts;
+        if (timeUs !== -1) {
+            this.timeUs = timeUs;
         }
 
         if (this.dataBuffer.byteLength > 0) {
