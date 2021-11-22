@@ -16,13 +16,13 @@ export class PESReader {
 
     public payloadReader: PayloadReader;
 
-    private lastPts: number;
+    private lastPtsUs: number;
     private pesLength: number;
 
     constructor(public pid: number, public type: number) {
         this.pid = pid;
         this.type = type;
-        this.lastPts = -1;
+        this.lastPtsUs = -1;
         this.pesLength = 0;
 
         if (type === PESReader.TS_STREAM_TYPE_AAC) {
@@ -47,7 +47,7 @@ export class PESReader {
     public appendData(payloadUnitStartIndicator: boolean, packet: BitReader): void {
         if (payloadUnitStartIndicator) {
             if (this.payloadReader) {
-                this.payloadReader.consumeData(this.lastPts);
+                this.payloadReader.consumeData(this.lastPtsUs);
             }
             this.parsePESHeader(packet);
         }
@@ -71,7 +71,7 @@ export class PESReader {
             pts |= (val & 0xFE) >>> 3;
             pts = pts << 2;
             pts += (val & 0x06) >>> 1;
-            this.lastPts = PESReader.ptsToTimeUs(pts);
+            this.lastPtsUs = PESReader.ptsToTimeUs(pts);
         }
     }
 
@@ -83,7 +83,7 @@ export class PESReader {
 
     public flush(): void {
         if (this.payloadReader) {
-            this.payloadReader.flush(this.lastPts);
+            this.payloadReader.flush(this.lastPtsUs);
         }
     }
 }
