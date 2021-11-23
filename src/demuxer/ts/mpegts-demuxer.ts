@@ -13,7 +13,8 @@ enum CONTAINER_TYPE {
 
 export class MpegTSDemuxer implements IDemuxer {
     private static MPEGTS_SYNC: number = 0x47;
-    private static MPEGTS_PACKET_SIZE: number = 187;
+    private static MPEGTS_PACKET_SIZE: number = 188;
+    private static MPEGTS_PACKET_SIZE_MINUS_ONE: number = 187;
 
     public tracks: { [id: number] : TSTrack; };
 
@@ -77,16 +78,17 @@ export class MpegTSDemuxer implements IDemuxer {
     public onPmtParsed() {};
 
     private parse(): void {
+
         this.findContainerType();
 
         if (this.containerType === CONTAINER_TYPE.MPEG_TS) {
-            this.readHeader();
-            this.readSamples();
-        } else { // FIXME: support raw mpeg audio
-            const dataParser: BitReader = new BitReader(this.data);
-            this.tracks[0] = new TSTrack(0, Track.TYPE_AUDIO, Track.MIME_TYPE_AAC,
+            this.readPackets();
+        } else {
+            const streamReader: BitReader = new BitReader(this.data);
+            this.tracks[0] = new TSTrack(0,
+                Track.TYPE_AUDIO, Track.MIME_TYPE_AAC,
                 new PESReader(0, PESReader.TS_STREAM_TYPE_AAC));
-            (this.tracks[0] as TSTrack).pes.appendData(false, dataParser);
+            this.tracks[0].pes.appendData(false, streamReader);
         }
     }
 
@@ -126,40 +128,21 @@ export class MpegTSDemuxer implements IDemuxer {
         }
     }
 
-    private readHeader(): void {
-        while (this.dataOffset < this.data.byteLength - 1) {
-            const byteRead: number = this.data[this.dataOffset];
-            this.dataOffset++;
+    private readPackets(): void {
+        // run as long as there is at least a full packet in buffer
+        while ((this.data.byteLength - this.dataOffset) >= MpegTSDemuxer.MPEGTS_PACKET_SIZE) {
 
-            if (byteRead === MpegTSDemuxer.MPEGTS_SYNC
-                && (this.data.byteLength - this.dataOffset) >= MpegTSDemuxer.MPEGTS_PACKET_SIZE) {
-
-                const packet: Uint8Array = this.data.subarray(this.dataOffset,
-                    this.dataOffset + MpegTSDemuxer.MPEGTS_PACKET_SIZE);
-                this.dataOffset += MpegTSDemuxer.MPEGTS_PACKET_SIZE;
-
-                this.processTSPacket(packet);
-
-                if (this.pmtParsed) {
-                    break;
-                }
+            // check for sync-byte
+            const currentByte: number = this.data[this.dataOffset];
+            if (currentByte !== MpegTSDemuxer.MPEGTS_SYNC) {
+                // keep looking if we are out of sync
+                this.dataOffset++;
+                continue;
             }
-        }
-    }
-
-    private readSamples(): void {
-        while (this.data && this.dataOffset < this.data.byteLength - 1) {
-            const byteRead: number = this.data[this.dataOffset++];
-
-            if (byteRead === MpegTSDemuxer.MPEGTS_SYNC
-                && (this.data.byteLength - this.dataOffset) >= MpegTSDemuxer.MPEGTS_PACKET_SIZE) {
-
-                const packet: Uint8Array = this.data.subarray(this.dataOffset, this.dataOffset
-                    + MpegTSDemuxer.MPEGTS_PACKET_SIZE);
-                this.dataOffset += MpegTSDemuxer.MPEGTS_PACKET_SIZE;
-
-                this.processTSPacket(packet);
-            }
+            const packet: Uint8Array = this.data.subarray(this.dataOffset + 1,
+                this.dataOffset + MpegTSDemuxer.MPEGTS_PACKET_SIZE_MINUS_ONE);
+            this.dataOffset += MpegTSDemuxer.MPEGTS_PACKET_SIZE;
+            this.processTsPacket(packet);
         }
     }
 
