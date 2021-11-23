@@ -153,33 +153,33 @@ export class MpegTSDemuxer implements IDemuxer {
         }
     }
 
-    private processTSPacket(packet: Uint8Array): void {
+    private processTsPacket(packet: Uint8Array): void {
 
         this.packetsCount++;
 
-        const packetParser: BitReader = new BitReader(packet);
-        packetParser.skipBits(1);
+        const packetReader: BitReader = new BitReader(packet);
+        packetReader.skipBits(1);
 
-        const payloadUnitStartIndicator: boolean = (packetParser.readBits(1) !== 0);
-        packetParser.skipBits(1);
+        const payloadUnitStartIndicator: boolean = (packetReader.readBits(1) !== 0);
+        packetReader.skipBits(1);
 
-        const pid: number = packetParser.readBits(13);
-        const adaptationField: number = (packetParser.readByte() & 0x30) >> 4;
+        const pid: number = packetReader.readBits(13);
+        const adaptationField: number = (packetReader.readByte() & 0x30) >> 4;
         if (adaptationField > 1) {
-            const length: number = packetParser.readByte();
+            const length: number = packetReader.readByte();
             if (length > 0) {
-                packetParser.skipBytes(length);
+                packetReader.skipBytes(length);
             }
         }
         if (adaptationField === 1 || adaptationField === 3) {
             if (pid === 0) {
-                this.parseProgramAllocationTable(payloadUnitStartIndicator, packetParser);
+                this.parseProgramAllocationTable(payloadUnitStartIndicator, packetReader);
             } else if (pid === this.pmtId) {
-                this.parseProgramMapTable(payloadUnitStartIndicator, packetParser);
+                this.parseProgramMapTable(payloadUnitStartIndicator, packetReader);
             } else {
-                const track: TSTrack = this.tracks[pid] as TSTrack;
+                const track: TSTrack = this.tracks[pid];
                 if (track && track.pes) {
-                    track.pes.appendData(payloadUnitStartIndicator, packetParser);
+                    track.pes.appendData(payloadUnitStartIndicator, packetReader);
                 }
             }
         }
