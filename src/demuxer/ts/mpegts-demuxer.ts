@@ -65,10 +65,14 @@ export class MpegTSDemuxer implements IDemuxer {
             // we might have dropped the data already
             // through a parsing callback calling end() for example.
             if (this.data) {
-                if (this.dataOffset >= this.data.byteLength) {
+                // the offset is expected to go +1 the buffer range
+                // thus the > instead of >=
+                if (this.dataOffset > this.data.byteLength) {
                     throw new Error('Reader offset is out of buffer range');
                 }
+                // second arg of .subarray is exclusive range
                 parsedBuf = this.data.subarray(0, this.dataOffset);
+                // the first argument yields to an empty array when out-of-range
                 this.data = this.data.subarray(this.dataOffset);
             }
             this.dataOffset = 0;
