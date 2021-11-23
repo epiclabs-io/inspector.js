@@ -44,9 +44,9 @@ export class MpegTSDemuxer implements IDemuxer {
     get isPmtParsed(): boolean {
         return this.isPmtParsed;
     }
-    public append(data: Uint8Array): void {
-        if (!this.data || this.data.byteLength === 0
-            || this.dataOffset >= this.data.byteLength) {
+
+    public append(data: Uint8Array): Uint8Array | null {
+        if (!this.data || this.data.byteLength === 0) {
             this.data = new Uint8Array(data);
             this.dataOffset = 0;
         } else {
@@ -59,16 +59,24 @@ export class MpegTSDemuxer implements IDemuxer {
 
         this.parse();
 
+        let parsedBuf: Uint8Array = null;
+        // prune off parsing remainder from buffer
         if (this.dataOffset > 0) {
-            if (this.dataOffset < this.data.byteLength) {
+            // we might have dropped the data already
+            // through a parsing callback calling end() for example.
+            if (this.data) {
+                if (this.dataOffset >= this.data.byteLength) {
+                    throw new Error('Reader offset is out of buffer range');
+                }
+                parsedBuf = this.data.subarray(0, this.dataOffset);
                 this.data = this.data.subarray(this.dataOffset);
-            } else {
-                this.data = null;
             }
             this.dataOffset = 0;
         }
 
         this.updateTracks();
+
+        return parsedBuf;
     }
 
     public end(): void {
