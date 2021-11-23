@@ -37,6 +37,13 @@ export class MpegTSDemuxer implements IDemuxer {
         return this?.data.byteLength || 0;
     }
 
+    get currentPacketCount(): number {
+        return this.packetsCount;
+    }
+
+    get isPmtParsed(): boolean {
+        return this.isPmtParsed;
+    }
     public append(data: Uint8Array): void {
         if (!this.data || this.data.byteLength === 0
             || this.dataOffset >= this.data.byteLength) {
