@@ -45,7 +45,7 @@ export class MpegTSDemuxer implements IDemuxer {
         return this.isPmtParsed;
     }
 
-    public append(data: Uint8Array): Uint8Array | null {
+    public append(data: Uint8Array, pruneAfterParse: boolean = false): Uint8Array | null  {
         if (!this.data || this.data.byteLength === 0) {
             this.data = new Uint8Array(data);
             this.dataOffset = 0;
@@ -58,7 +58,15 @@ export class MpegTSDemuxer implements IDemuxer {
         }
 
         this.parse();
+        this.updateTracks();
 
+        if (pruneAfterParse) {
+            return this.prune();
+        }
+        return null;
+    }
+
+    public prune(): Uint8Array | null {
         let parsedBuf: Uint8Array = null;
         // prune off parsing remainder from buffer
         if (this.dataOffset > 0) {
@@ -77,9 +85,6 @@ export class MpegTSDemuxer implements IDemuxer {
             }
             this.dataOffset = 0;
         }
-
-        this.updateTracks();
-
         return parsedBuf;
     }
 
