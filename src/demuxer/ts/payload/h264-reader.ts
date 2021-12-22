@@ -181,11 +181,8 @@ export class H264Reader extends PayloadReader {
         sliceParser.readUEG();
         const sliceType: number = sliceParser.readUEG();
         const type: string = this.getSliceTypeName(sliceType);
-        if (this.sps && this.pps) {
-            this.addNewFrame(type, limit - start);
-        } else {
-            // console.warn('Slice ' + type + ' received without sps/pps been set');
-        }
+        this.addNewFrame(type, limit - start);
+
         sliceParser.destroy();
         sliceParser = null;
     }
