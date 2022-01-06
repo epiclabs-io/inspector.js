@@ -11,7 +11,7 @@ import { Sidx } from './atoms/sidx';
 import { Trun, SampleFlags } from './atoms/trun';
 import { Avc1 } from './atoms/avc1';
 
-import { toMicroseconds } from '../../utils/timescale';
+import { MICROSECOND_TIMESCALE, toMicroseconds } from '../../utils/timescale';
 
 export type Mp4TrackDefaults = {
   sampleDuration: number;
@@ -24,12 +24,13 @@ export class Mp4Track extends Track {
     private sidx: Sidx = null;
     private trunInfo: Trun[] = [];
     private trunInfoReadIndex: number = 0;
-    private lastPts: number;
-    private lastPtsUnscaledUint: number;
+    private lastDtsUs: number = 0;
+    private lastDtsScaled: number = 0;
     private timescale: number = null;
     private defaults: Mp4TrackDefaults[] = [];
     private defaultSampleFlagsParsed: (SampleFlags | null)[] = [];
     private baseDataOffset: number = 0;
+    private baseMediaDecodeTime: number = 0;
 
     constructor(
         id: number,
@@ -41,9 +42,8 @@ export class Mp4Track extends Track {
     ) {
 
         super(id, type, mimeType);
-        this.lastPts = 0;
-        this.lastPtsUnscaledUint = 0;
-        this.duration = 0;
+        // declared in base-class
+        this.durationUs = 0;
 
         if (this.dataOffset < 0) {
           throw new Error('Invalid file, no sample-data base-offset can be determined');
@@ -87,12 +87,18 @@ export class Mp4Track extends Track {
         return this.metadataAtom;
     }
 
-    public getLastPts(): number {
-      return this.lastPts;
-    }
-
     public getTimescale(): number {
         return this.timescale;
+    }
+
+    public setBaseMediaDecodeTime(baseDts: number) {
+        this.baseMediaDecodeTime = baseDts;
+        this.lastDtsScaled = baseDts;
+        this.lastDtsUs = toMicroseconds(baseDts, this.timescale);
+    }
+
+    public getBaseMediaDecodeTime(): number {
+        return this.baseMediaDecodeTime;
     }
 
     public setTimescale(timescale: number) {
@@ -150,8 +156,8 @@ export class Mp4Track extends Track {
 
     public setSidxAtom(atom: Atom): void {
         this.sidx = atom as Sidx;
-        this.lastPtsUnscaledUint = this.sidx.earliestPresentationTime;
-        this.lastPts = 1000000 * this.sidx.earliestPresentationTime / this.sidx.timescale;
+        this.lastDtsScaled = this.sidx.earliestPresentationTime;
+        this.lastDtsUs = toMicroseconds(this.sidx.earliestPresentationTime, this.sidx.timescale);
         this.timescale = this.sidx.timescale;
     }
 
@@ -159,9 +165,9 @@ export class Mp4Track extends Track {
         if (!frame.hasUnnormalizedIntegerTiming()) {
             throw new Error('Frame must have unscaled-int sample timing');
         }
-        this.lastPtsUnscaledUint += frame.scaledDuration;
-        this.lastPts += frame.duration;
-        this.duration += frame.duration;
+        this.lastDtsScaled += frame.scaledDuration;
+        this.lastDtsUs += frame.duration;
+        this.durationUs += frame.duration;
         this.frames.push(frame);
     }
 
@@ -191,45 +197,40 @@ export class Mp4Track extends Track {
 
             for (let i = 0; i < trun.samples.length; i++) {
                 const sample = trun.samples[i];
-                const sampleDuration = sample.duration || this.defaults[trunIndex]?.sampleDuration;
-                if (!sampleDuration) {
-                    throw new Error('Invalid file, samples have no duration');
-                }
-
-                const duration: number = toMicroseconds(sampleDuration, timescale);
 
                 const flags = sample.flags || this.defaultSampleFlagsParsed[trunIndex];
                 if (!flags) {
                     //warn('no default sample flags in track sample-run');
                     // in fact the trun box parser should provide a fallback instance of flags in this case
-                    //throw new Error('Invalid file, sample has no flags');
                 }
 
-                const cto: number = toMicroseconds((sample.compositionTimeOffset || 0), timescale);
+                const sampleDuration = sample.duration || this.defaults[trunIndex]?.sampleDuration;
+                if (!sampleDuration) {
+                    throw new Error('Invalid file, samples have no duration');
+                }
 
-                const timeUs = this.lastPts;
+                const durationUs: number = toMicroseconds(sampleDuration, timescale);
+                const ctoUs: number = toMicroseconds((sample.compositionTimeOffset || 0), timescale);
+                const dtsUs = this.lastDtsUs;
 
                 const frameSize = sample.size || this.defaults[trunIndex]?.sampleSize;
                 if (!frameSize) throw new Error('Frame has to have either sample-size of trun-entry or track default');
 
-
                 const newFrame = new Frame(
                     flags ? (flags.isSyncFrame ? Frame.IDR_FRAME : Frame.P_FRAME) : Frame.UNFLAGGED_FRAME,
-                    timeUs,
+                    dtsUs,
                     frameSize,
-                    duration,
+                    durationUs,
                     bytesOffset,
-                    cto
+                    ctoUs
                 );
 
                 newFrame.scaledDuration = sampleDuration;
-                newFrame.scaledDecodingTime = this.lastPtsUnscaledUint;
+                newFrame.scaledDecodingTime = this.lastDtsScaled;
                 newFrame.scaledPresentationTimeOffset = sample.compositionTimeOffset || 0;
                 newFrame.timescale = timescale;
 
                 this.appendFrame(newFrame);
-
-                //debug(`frame: @ ${newFrame.timeUs} [us] -> ${newFrame.bytesOffset} / ${newFrame.size}`)
 
                 bytesOffset += frameSize;
             }

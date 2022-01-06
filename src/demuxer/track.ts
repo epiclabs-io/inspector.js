@@ -23,7 +23,7 @@ export class Track {
     public static MIME_TYPE_UNKNOWN: string = 'unknown';
 
     protected frames: Frame[] = [];
-    protected duration: number = NaN;
+    protected durationUs: number = NaN;
 
     constructor(public id: number, public type: string /* fixme: make enum type */, public mimeType: string) {}
 
@@ -31,7 +31,7 @@ export class Track {
         this.frames = this.getFrames().sort((a: Frame, b: Frame): number => {
             return a.timeUs - b.timeUs;
         });
-        this.duration = this.getDuration();
+        this.durationUs = this.getDuration();
     }
 
     public flush() {
@@ -61,7 +61,7 @@ export class Track {
     }
 
     public getDuration(): number {
-        return this.duration;
+        return this.durationUs;
     }
 
     public getDurationInSeconds(): number {

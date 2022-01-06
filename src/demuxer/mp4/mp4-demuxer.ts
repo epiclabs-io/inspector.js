@@ -1,12 +1,10 @@
 import ByteParserUtils from '../../utils/byte-parser-utils';
 
-import { Track } from '../track';
-import { Mp4Track } from './mp4-track';
-
 import { IDemuxer, TracksHash } from '../demuxer';
 
-import { AudioAtom } from './atoms/helpers/audio-atom';
-import { VideoAtom } from './atoms/helpers/video-atom';
+import { Track } from '../track';
+import { Mp4Track } from './mp4-track';
+import { Mp4SampleTable } from './mp4-sample-table';
 
 import { boxesParsers } from './atoms';
 import { Atom, ContainerAtom } from './atoms/atom';
@@ -22,10 +20,12 @@ import { Ctts } from './atoms/ctts';
 import { Stss } from './atoms/stss';
 import { Stco } from './atoms/stco';
 import { Mdhd } from './atoms/mdhd';
-
-import { Mp4SampleTable } from './mp4-sample-table';
 import { Esds } from './atoms/esds';
 import { Mvhd } from './atoms/mvhd';
+import { Tfdt } from './atoms/tfdt';
+
+import { AudioAtom } from './atoms/helpers/audio-atom';
+import { VideoAtom } from './atoms/helpers/video-atom';
 
 const log = (...msg: any[]) => void 0; // console.log.bind(console);
 const warn = console.warn.bind(console);
@@ -198,6 +198,11 @@ export class Mp4Demuxer implements IDemuxer {
                 break;
 
             // Fragmented-mode ...
+
+            case Atom.tfdt:
+                const tfdt: Tfdt = atom as Tfdt;
+                this._getLastTrackCreated().setBaseMediaDecodeTime(tfdt.baseMediaDecodeTime);
+                break;
 
             case Atom.tfhd:
                 // FIXME: should be handled differently
