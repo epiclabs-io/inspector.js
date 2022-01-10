@@ -58,8 +58,9 @@ export class H264Reader extends PayloadReader {
         }
     }
 
-    public sps: Sps;
-    public pps: boolean;
+    public sps: Sps = null;
+    public pps: boolean = false;
+
     public pendingBytes: number;
 
     constructor() {
