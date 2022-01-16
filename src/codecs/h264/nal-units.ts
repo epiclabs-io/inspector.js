@@ -31,7 +31,7 @@ export enum FRAME_TYPE {
     UNKNOWN = ''
 }
 
-export function mapNaluSliceToFrameType(sliceType: number): FRAME_TYPE {
+export function mapNaluSliceToFrameType(sliceType: SLICE_TYPE): FRAME_TYPE {
     if (sliceType > 4) {
         sliceType = sliceType - 5;
     }

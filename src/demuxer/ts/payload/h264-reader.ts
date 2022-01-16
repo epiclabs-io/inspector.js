@@ -3,7 +3,7 @@ import { PayloadReader } from './payload-reader';
 import { Frame } from '../../frame';
 import { Track } from '../../track';
 import { H264ParameterSetParser } from '../../../codecs/h264/param-set-parser';
-import { mapNaluSliceToFrameType, NAL_UNIT_TYPE, Sps } from '../../../codecs/h264/nal-units';
+import { mapNaluSliceToFrameType, NAL_UNIT_TYPE, SLICE_TYPE, Sps } from '../../../codecs/h264/nal-units';
 
 export class H264Reader extends PayloadReader {
 
@@ -156,7 +156,7 @@ export class H264Reader extends PayloadReader {
         let sliceParser: BitReader = new BitReader(this.dataBuffer.subarray(start, limit));
         sliceParser.skipBytes(4);
         sliceParser.readUEG();
-        const sliceType: number = sliceParser.readUEG();
+        const sliceType: SLICE_TYPE = sliceParser.readUEG();
         const type: string = mapNaluSliceToFrameType(sliceType);
         this.addNewFrame(type, limit - start, NaN);
 
