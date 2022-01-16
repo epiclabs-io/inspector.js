@@ -35,29 +35,6 @@ export class Fraction {
 
 export class H264Reader extends PayloadReader {
 
-    static getNALUnitName(nalType: number): string {
-        switch (nalType) {
-            case NAL_UNIT_TYPE.SLICE:
-                return 'SLICE';
-            case NAL_UNIT_TYPE.SEI:
-                return 'SEI';
-            case NAL_UNIT_TYPE.PPS:
-                return 'PPS';
-            case NAL_UNIT_TYPE.SPS:
-                return 'SPS';
-            case NAL_UNIT_TYPE.AUD:
-                return 'AUD';
-            case NAL_UNIT_TYPE.IDR:
-                return 'IDR';
-            case NAL_UNIT_TYPE.END_SEQUENCE:
-                return 'END SEQUENCE';
-            case NAL_UNIT_TYPE.END_STREAM:
-                return 'END STREAM';
-            default:
-                return 'Unknown';
-        }
-    }
-
     public sps: Sps = null;
     public pps: boolean = false;
 
@@ -210,7 +187,7 @@ export class H264Reader extends PayloadReader {
         const sliceType: number = sliceParser.readUEG();
         const type: string = this.getSliceTypeName(sliceType);
         this.addNewFrame(type, limit - start, NaN);
-        
+
         sliceParser.destroy();
         sliceParser = null;
     }
