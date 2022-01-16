@@ -3,35 +3,7 @@ import { PayloadReader } from './payload-reader';
 import { Frame } from '../../frame';
 import { Track } from '../../track';
 import { H264ParameterSetParser } from '../../../codecs/h264/param-set-parser';
-import { Sps } from '../../../codecs/h264/nal-units';
-
-enum NAL_UNIT_TYPE {
-    SLICE = 1,
-    DPA,
-    DPB,
-    DPC,
-    IDR,
-    SEI,
-    SPS,
-    PPS,
-    AUD,
-    END_SEQUENCE,
-    END_STREAM
-}
-
-enum SLICE_TYPE {
-    P = 0,
-    B,
-    I,
-    SP,
-    SI
-}
-
-export class Fraction {
-    constructor(public num: number, public den: number) {
-        // do nothing
-    }
-}
+import { mapNaluSliceToFrameType, NAL_UNIT_TYPE, Sps } from '../../../codecs/h264/nal-units';
 
 export class H264Reader extends PayloadReader {
 
@@ -185,7 +157,7 @@ export class H264Reader extends PayloadReader {
         sliceParser.skipBytes(4);
         sliceParser.readUEG();
         const sliceType: number = sliceParser.readUEG();
-        const type: string = this.getSliceTypeName(sliceType);
+        const type: string = mapNaluSliceToFrameType(sliceType);
         this.addNewFrame(type, limit - start, NaN);
 
         sliceParser.destroy();
@@ -195,26 +167,6 @@ export class H264Reader extends PayloadReader {
     private parseAUDNALUnit(start: number, limit: number): void {
         // const audParser: BitReader = new BitReader(this.dataBuffer.subarray(start, limit));
         // audParser.skipBytes(4);
-    }
-
-    private getSliceTypeName(sliceType: number): string {
-        if (sliceType > 4) {
-            sliceType = sliceType - 5;
-        }
-        switch (sliceType) {
-            case SLICE_TYPE.B:
-                return Frame.B_FRAME;
-            case SLICE_TYPE.I:
-                return Frame.IDR_FRAME;
-            case SLICE_TYPE.P:
-                return Frame.P_FRAME;
-            case SLICE_TYPE.SI:
-                return 'SI';
-            case SLICE_TYPE.SP:
-                return 'SP';
-            default:
-                return 'Unknown';
-        }
     }
 
     private addNewFrame(frameType: string, frameSize: number, duration: number): void {
