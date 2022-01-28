@@ -1,17 +1,15 @@
-import { Track } from '../track';
+import { toMicroseconds } from '../../utils/timescale';
+import { FRAME_TYPE } from '../../codecs/h264/nal-units';
 
+import { Track } from '../track';
 import { Frame } from '../frame';
 
 import { Atom } from './atoms/atom';
-
 import { AudioAtom } from './atoms/helpers/audio-atom';
 import { VideoAtom } from './atoms/helpers/video-atom';
-
 import { Sidx } from './atoms/sidx';
 import { Trun, SampleFlags } from './atoms/trun';
 import { Avc1 } from './atoms/avc1';
-
-import { MICROSECOND_TIMESCALE, toMicroseconds } from '../../utils/timescale';
 
 export type Mp4TrackDefaults = {
   sampleDuration: number;
@@ -217,7 +215,7 @@ export class Mp4Track extends Track {
                 if (!frameSize) throw new Error('Frame has to have either sample-size of trun-entry or track default');
 
                 const newFrame = new Frame(
-                    flags ? (flags.isSyncFrame ? Frame.IDR_FRAME : Frame.P_FRAME) : Frame.UNFLAGGED_FRAME,
+                    flags ? (flags.isSyncFrame ? FRAME_TYPE.I : FRAME_TYPE.P) : FRAME_TYPE.NONE,
                     dtsUs,
                     frameSize,
                     durationUs,

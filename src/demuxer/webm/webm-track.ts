@@ -1,8 +1,11 @@
+import ByteParserUtils from '../../utils/byte-parser-utils';
+import { FRAME_TYPE } from '../../codecs/h264/nal-units';
+
 import { Track } from '../track';
 import { Frame } from '../frame';
+
 import { ITrackInfo } from './elements/track-info';
 import { Vint, EbmlElement } from './ebml/ebml-types';
-import ByteParserUtils from '../../utils/byte-parser-utils';
 
 export class WebMTrack extends Track {
     private lastPts: number;
@@ -104,9 +107,9 @@ export class WebMTrack extends Track {
         this.lastPts = 1000 * ((this.lastTimecodeBase + timecode) / (this.timecodeScale > 0 ? this.timecodeScale : 1));
 
         if (element.name === 'SimpleBlock' && flags & 0x80) {
-            this.frames.push(new Frame(Frame.IDR_FRAME, this.lastPts, buffer.length));
+            this.frames.push(new Frame(FRAME_TYPE.I, this.lastPts, buffer.length));
         } else {
-            this.frames.push(new Frame(Frame.P_FRAME, this.lastPts, buffer.length));
+            this.frames.push(new Frame(FRAME_TYPE.P, this.lastPts, buffer.length));
         }
     }
 }

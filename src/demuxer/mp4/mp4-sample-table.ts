@@ -1,3 +1,8 @@
+import { toMicroseconds } from '../../utils/timescale';
+import { FRAME_TYPE } from '../../codecs/h264/nal-units';
+
+import { Frame } from '../frame';
+
 import { Stts, TimeToSampleEntry } from './atoms/stts';
 import { Stsc, SampleToChunkEntry } from './atoms/stsc';
 import { Stsz } from './atoms/stsz';
@@ -5,10 +10,6 @@ import { Ctts, CTimeOffsetToSampleEntry } from './atoms/ctts';
 import { Mp4Track } from './mp4-track';
 import { Stss } from './atoms/stss';
 import { Stco } from './atoms/stco';
-
-import { Frame } from '../frame';
-
-import { toMicroseconds } from '../../utils/timescale';
 
 export class Mp4SampleTable {
     decodingTimestamps: Stts;
@@ -50,7 +51,7 @@ export class Mp4SampleTable {
                 const isSyncFrame = this.syncSamples ? (this.syncSamples.syncSampleNumbers.indexOf(frameCount + 1) >= 0) : false;
 
                 const newFrame = new Frame(
-                    isSyncFrame ? Frame.IDR_FRAME : Frame.P_FRAME,
+                    isSyncFrame ? FRAME_TYPE.I : FRAME_TYPE.P,
                     toMicroseconds(dts, this._track.getTimescale()),
                     this.sampleSizes.sampleSize || this.sampleSizes.entries[frameCount],
                     toMicroseconds(entry.sampleDelta, this._track.getTimescale())
