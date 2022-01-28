@@ -47,7 +47,7 @@ export class PESReader {
     public appendData(payloadUnitStartIndicator: boolean, packet: BitReader): void {
         if (payloadUnitStartIndicator) {
             if (this.payloadReader) {
-                this.payloadReader.consumeData(this.lastPtsUs);
+                this.payloadReader.read(this.lastPtsUs);
             }
             this.parsePESHeader(packet);
         }

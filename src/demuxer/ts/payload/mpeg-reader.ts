@@ -1,6 +1,7 @@
 import ByteParserUtils from '../../../utils/byte-parser-utils';
 import { PayloadReader } from './payload-reader';
 import { Frame } from '../../frame';
+import { FRAME_TYPE } from '../../../codecs/h264/nal-units';
 
 enum State {
     FIND_SYNC = 1,
@@ -51,7 +52,7 @@ export class MpegReader extends PayloadReader {
         return 'audio/' + this.mimeType;
     }
 
-    public consumeData(pts: number): void {
+    public read(pts: number): void {
         if (!this.dataBuffer) {
             return;
         }
@@ -175,7 +176,7 @@ export class MpegReader extends PayloadReader {
             return 0;
         }
         this.state = State.FIND_SYNC;
-        this.frames.push(new Frame(Frame.IDR_FRAME, this.timeUs, this.currentFrameSize));
+        this.frames.push(new Frame(FRAME_TYPE.NONE, this.timeUs, this.currentFrameSize));
         this.timeUs = this.timeUs + this.frameDuration;
         return MpegReader.HEADER_SIZE + this.currentFrameSize;
     }

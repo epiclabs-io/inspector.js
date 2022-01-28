@@ -7,13 +7,17 @@ export abstract class PayloadReader {
     public frames: Frame[] = [];
     public dataBuffer: Uint8Array;
 
-    protected dataOffset: number;
+    protected dataOffset: number = 0;
 
     private firstPacketDataOffset: number;
 
     constructor() {
         this.reset();
     }
+
+    public abstract read(pts: number): void;
+
+    public onData(data: Uint8Array) {}
 
     public append(packet: BitReader): void {
 
@@ -43,7 +47,7 @@ export abstract class PayloadReader {
 
     public flush(pts: number): void {
         if (this.dataBuffer && this.dataBuffer.byteLength > 0) {
-            this.consumeData(pts);
+            this.read(pts);
             this.dataBuffer = null;
         }
         this.dataOffset = 0;
@@ -51,14 +55,12 @@ export abstract class PayloadReader {
 
     public popFrames(): Frame[] {
         if (this.frames.length === 0) {
-            return this.frames;
+            return [];
         }
         const frames = this.frames.slice(0);
         this.frames.length = 0;
         return frames;
     }
-
-    public abstract consumeData(pts: number): void;
 
     public getMimeType(): string {
         return 'Unknown';

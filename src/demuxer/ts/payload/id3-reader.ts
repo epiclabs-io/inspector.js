@@ -7,7 +7,7 @@ export class ID3Reader extends PayloadReader {
         return Track.MIME_TYPE_ID3;
     }
 
-    public consumeData(pts: number): void {
+    public read(pts: number): void {
         // do nothing
     }
 }

@@ -6,7 +6,7 @@ export class UnknownReader extends PayloadReader {
         return 'unknown';
     }
 
-    public consumeData(pts: number): void {
+    public read(pts: number): void {
         // do nothing
     }
 }
