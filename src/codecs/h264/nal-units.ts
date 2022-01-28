@@ -28,7 +28,7 @@ export enum FRAME_TYPE {
     B = 'B',
     SI = 'SI',
     SP = 'SP',
-    UNKNOWN = ''
+    NONE = ''
 }
 
 export function mapNaluSliceToFrameType(sliceType: SLICE_TYPE): FRAME_TYPE {
@@ -47,7 +47,7 @@ export function mapNaluSliceToFrameType(sliceType: SLICE_TYPE): FRAME_TYPE {
         case SLICE_TYPE.SP:
             return FRAME_TYPE.SP;
         default:
-            return FRAME_TYPE.UNKNOWN;
+            return FRAME_TYPE.NONE;
     }
 }
 
