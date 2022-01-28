@@ -1,12 +1,7 @@
+import { FRAME_TYPE } from "../codecs/h264/nal-units";
 import { toSecondsFromMicros } from "../utils/timescale";
 
 export class Frame {
-
-    // fixme: should be an enum
-    public static IDR_FRAME: string = 'I';
-    public static P_FRAME: string = 'P';
-    public static B_FRAME: string = 'B';
-    public static UNFLAGGED_FRAME: string = '/';
 
     // normalized micros value
     private presentationTimeUs: number = 0;
@@ -18,7 +13,7 @@ export class Frame {
     public scaledDuration: number = NaN;
 
     constructor (
-        public readonly frameType: string,
+        public readonly frameType: FRAME_TYPE,
         public readonly timeUs: number,
         public readonly size: number,
         public readonly duration: number = NaN,
