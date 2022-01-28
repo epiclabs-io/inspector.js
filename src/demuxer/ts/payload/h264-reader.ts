@@ -3,18 +3,19 @@ import { PayloadReader } from './payload-reader';
 import { Frame } from '../../frame';
 import { Track } from '../../track';
 import { H264ParameterSetParser } from '../../../codecs/h264/param-set-parser';
-import { mapNaluSliceToFrameType, NAL_UNIT_TYPE, SLICE_TYPE, Sps } from '../../../codecs/h264/nal-units';
+import { FRAME_TYPE, mapNaluSliceToFrameType, NAL_UNIT_TYPE, SLICE_TYPE, Sps } from '../../../codecs/h264/nal-units';
+
+const NALU_DELIM_LEN = 3;
 
 export class H264Reader extends PayloadReader {
 
     public sps: Sps = null;
     public pps: boolean = false;
 
-    public pendingBytes: number;
+    public pendingBytes: number = 0;
 
     constructor() {
         super();
-        this.pendingBytes = 0;
     }
 
     public getMimeType(): string {
@@ -22,16 +23,19 @@ export class H264Reader extends PayloadReader {
     }
 
     public flush(timeUs: number): void {
-        if (this.dataBuffer && this.dataBuffer.byteLength > 0) {
-            this.consumeData(timeUs);
 
-            if (this.dataBuffer.byteLength > 0) {
-                const offset: number = this.findNextNALUnit(0);
-                if (offset < this.dataBuffer.byteLength) {
-                    this.processNALUnit(offset, this.dataBuffer.byteLength, this.dataBuffer[offset + 3] & 0x1F);
-                }
-            }
+        this.read(timeUs);
+
+        // enforced process any last data after
+        // a nalu-delim to be processed
+        // (most likely partial NALUs).
+        const nextNalUnit: number = this.findNextNalu(0);
+        if (!Number.isFinite(nextNalUnit)) {
+            return;
         }
+        this.processNalu(nextNalUnit,
+            this.dataBuffer.byteLength,
+            this.readNaluHeadAt(nextNalUnit));
     }
 
     public reset(): void {
@@ -41,135 +45,124 @@ export class H264Reader extends PayloadReader {
         this.pps = false;
     }
 
-    public consumeData(timeUs: number): void {
+    public read(timeUs: number): void {
 
-        if (!this.dataBuffer) {
-            return;
+        // process pending remainder data
+        let firstNalUnit: number = 0;
+        let nextNalUnit: number = 0;
+
+        if (this.pendingBytes > 0) {
+            nextNalUnit = this.findNextNalu(this.pendingBytes);
+            // if we cant find a next NALU-delim from the remainder data,
+            // we can already give-up here.
+            if (!Number.isFinite(nextNalUnit)) {
+                return;
+            }
+            this.processNalu(0, nextNalUnit, this.readNaluHeadAt(firstNalUnit));
+            firstNalUnit = nextNalUnit;
+        } else {
+            firstNalUnit = this.findNextNalu();
+            if (!Number.isFinite(firstNalUnit)) {
+                return;
+            }
         }
+
+        // post: firstNalUnit is finite number
+
+        // Q: for what else do we need this timeUs param, and
+        // why do we need to set this superclass prop here
+        // as it gets passed in from the call arg... ?
+
+        // FIXME: use NaN instead of -1
         if (this.firstTimestamp === -1) {
             this.timeUs = this.firstTimestamp = timeUs;
         }
-
-        // process any possible remaining data
-        let nextNalUnit: number = 0;
-        let offset: number = 0;
-        if (this.pendingBytes > 0) {
-            nextNalUnit = this.findNextNALUnit(this.pendingBytes);
-            if (nextNalUnit < this.dataBuffer.byteLength) {
-                this.processNALUnit(0, nextNalUnit, this.dataBuffer[offset + 3] & 0x1F);
-                offset = nextNalUnit;
-            }
-            this.pendingBytes = 0;
-        } else {
-            offset = this.findNextNALUnit(0);
-        }
-
-        // process next nal units in the buffer
         if (timeUs !== -1) {
             this.timeUs = timeUs;
         }
 
-        if (this.dataBuffer.byteLength > 0) {
-            while (nextNalUnit < this.dataBuffer.byteLength) {
-                nextNalUnit = this.findNextNALUnit(offset + 3);
-                if (nextNalUnit < this.dataBuffer.byteLength) {
-                    this.processNALUnit(offset, nextNalUnit, this.dataBuffer[offset + 3] & 0x1F);
-                    offset = nextNalUnit;
-                }
+        // process next nal units in the buffer
+        while (true) {
+            // w/o the +3 we would end up again with the input offset!
+            nextNalUnit = this.findNextNalu(firstNalUnit + NALU_DELIM_LEN);
+            if (!Number.isFinite(nextNalUnit)) {
+                break;
             }
 
-            this.dataBuffer = this.dataBuffer.subarray(offset);
-            this.pendingBytes = this.dataBuffer.byteLength;
+            this.processNalu(firstNalUnit, nextNalUnit,
+                this.readNaluHeadAt(firstNalUnit));
+
+            firstNalUnit = nextNalUnit;
         }
+
+        // prune data-buffer
+        this.dataBuffer = this.dataBuffer.subarray(firstNalUnit);
+
+        // we need to make sure the next read starts off
+        // ahead the last parsed NALU-delimiter.
+        this.pendingBytes = this.dataBuffer.byteLength;
     }
 
-    private findNextNALUnit(index: number): number {
-        const limit: number = this.dataBuffer.byteLength - 3;
-        for (let i: number = index; i < limit; i++) {
-            if (this.dataBuffer[i] === 0 && this.dataBuffer[i + 1] === 0 && this.dataBuffer[i + 2] === 1) {
+    private findNextNalu(offset: number = 0): number {
+        if (!(this?.dataBuffer?.byteLength)) {
+            return NaN;
+        }
+
+        const length: number = this.dataBuffer.byteLength - NALU_DELIM_LEN;
+        for (let i: number = offset; i < length; i++) {
+            if (this.dataBuffer[i] === 0
+                && this.dataBuffer[i + 1] === 0
+                && this.dataBuffer[i + 2] === 1) {
                 return i;
             }
         }
-
-        return this.dataBuffer.byteLength;
+        return NaN;
     }
 
-    private processNALUnit(start: number, limit: number, nalType: number): void {
+    private readNaluHeadAt(offset: number): number {
+        // TODO: check for invalid values
+        // (can be if buffer begin/remainder is garbage)
+        return this.dataBuffer[offset + NALU_DELIM_LEN] & 0x1F;
+    }
 
-        if (nalType === NAL_UNIT_TYPE.SPS) {
-            this.parseSPSNALUnit(start, limit);
-        } else if (nalType === NAL_UNIT_TYPE.PPS) {
+    private processNalu(start: number, end: number, nalType: number): void {
+
+        switch(nalType) {
+        case NAL_UNIT_TYPE.SLICE:
+            this.parseSliceNALUnit(start, end);
+            break;
+        case NAL_UNIT_TYPE.IDR:
+            this.addFrame(FRAME_TYPE.I, end - start - NALU_DELIM_LEN, NaN);
+            break;
+        case NAL_UNIT_TYPE.SPS:
+            this.parseSPSNALUnit(start, end);
+            break;
+        case NAL_UNIT_TYPE.PPS:
             this.pps = true;
-        } else if (nalType === NAL_UNIT_TYPE.AUD) {
-            this.parseAUDNALUnit(start, limit);
-        } else if (nalType === NAL_UNIT_TYPE.IDR) {
-            this.addNewFrame(Frame.IDR_FRAME, limit - start, NaN);
-        } else if (nalType === NAL_UNIT_TYPE.SEI) {
-            this.parseSEINALUnit(start, limit);
-        } else if (nalType === NAL_UNIT_TYPE.SLICE) {
-            this.parseSliceNALUnit(start, limit);
-        }
-    }
-
-    private parseSPSNALUnit(start: number, limit: number): void {
-        this.sps = H264ParameterSetParser.parseSPS(this.dataBuffer.subarray(start + 4, limit));
-    }
-
-    private skipScalingList(parser: BitReader, size: number): void {
-        let lastScale: number = 8;
-        let nextScale: number = 8;
-        for (let i: number = 0; i < size; i++) {
-            if (nextScale !== 0) {
-                const deltaScale: number = parser.readSEG();
-                nextScale = (lastScale + deltaScale + 256) % 256;
-            }
-            if (nextScale !== 0) {
-                lastScale = nextScale;
-            }
-        }
-    }
-
-    private parseSEINALUnit(start: number, limit: number): void {
-        let seiParser: BitReader = new BitReader(this.dataBuffer.subarray(start, limit));
-        seiParser.skipBytes(4);
-
-        while (seiParser.remainingBytes() > 0) {
-            const data: number = seiParser.readByte();
-            if (data !== 0xFF) {
-                break;
-            }
+            break;
+        default:
+            break;
         }
 
-        // parse payload size
-        while (seiParser.remainingBytes() > 0) {
-            const data: number = seiParser.readByte();
-            if (data !== 0xFF) {
-                break;
-            }
-        }
-
-        seiParser.destroy();
-        seiParser = null;
+        this.onData(this.dataBuffer.subarray(start + NALU_DELIM_LEN, end));
     }
 
-    private parseSliceNALUnit(start: number, limit: number): void {
-        let sliceParser: BitReader = new BitReader(this.dataBuffer.subarray(start, limit));
+    private parseSPSNALUnit(start: number, end: number): void {
+        this.sps = H264ParameterSetParser.parseSPS(this.dataBuffer.subarray(start + 4, end));
+    }
+
+    private parseSliceNALUnit(start: number, end: number): void {
+        const sliceParser: BitReader = new BitReader(this.dataBuffer.subarray(start, end));
         sliceParser.skipBytes(4);
         sliceParser.readUEG();
         const sliceType: SLICE_TYPE = sliceParser.readUEG();
-        const type: string = mapNaluSliceToFrameType(sliceType);
-        this.addNewFrame(type, limit - start, NaN);
-
         sliceParser.destroy();
-        sliceParser = null;
+
+        const frameType: FRAME_TYPE = mapNaluSliceToFrameType(sliceType);
+        this.addFrame(frameType, end - start - NALU_DELIM_LEN, NaN);
     }
 
-    private parseAUDNALUnit(start: number, limit: number): void {
-        // const audParser: BitReader = new BitReader(this.dataBuffer.subarray(start, limit));
-        // audParser.skipBytes(4);
-    }
-
-    private addNewFrame(frameType: string, frameSize: number, duration: number): void {
+    private addFrame(frameType: FRAME_TYPE, frameSize: number, duration: number): void {
         const frame = new Frame(frameType, this.timeUs, frameSize, duration);
         this.frames.push(frame);
     }

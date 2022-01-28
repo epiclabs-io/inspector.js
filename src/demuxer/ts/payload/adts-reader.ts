@@ -2,43 +2,40 @@ import { BitReader } from '../../../utils/bit-reader';
 import { PayloadReader } from './payload-reader';
 import { Frame } from '../../frame';
 import { Track } from '../../track';
+import { FRAME_TYPE } from '../../../codecs/h264/nal-units';
 
-enum State {
-    FIND_SYNC = 1,
-    READ_HEADER = 2,
-    READ_FRAME = 3
+enum AdtsReaderState {
+    FIND_SYNC,
+    READ_HEADER,
+    READ_FRAME
 }
 
 export class AdtsReader extends PayloadReader {
     private static ADTS_HEADER_SIZE: number = 5;
     private static ADTS_SYNC_SIZE: number = 2;
+    private static ADTS_SYNC_AND_HEADER_LEN = AdtsReader.ADTS_HEADER_SIZE + AdtsReader.ADTS_SYNC_SIZE;
+
     private static ADTS_CRC_SIZE: number = 2;
 
     private static ADTS_SAMPLE_RATES: number[] = [96000, 88200, 64000, 48000,
         44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
 
-    public channels: number;
-    public sampleRate: number;
-    public frameDuration: number;
-    public currentFrameSize: number;
+    public channels: number = 0;
+    public sampleRate: number = 0;
+    public frameDuration: number = 0;
+    public currentPayloadUnitLen: number = 0;
 
-    private state: State;
+    private state: AdtsReaderState = AdtsReaderState.FIND_SYNC;
 
     constructor () {
         super();
-        this.channels = 0;
-        this.sampleRate = 0;
-        this.frameDuration = 0;
-        this.currentFrameSize = 0;
-        this.state = State.FIND_SYNC;
-        this.dataOffset = 0;
     }
 
     public getMimeType(): string {
         return Track.MIME_TYPE_AAC;
     }
 
-    public consumeData(pts: number): void {
+    public read(pts: number): void {
         if (!this.dataBuffer) {
             return;
         }
@@ -51,26 +48,35 @@ export class AdtsReader extends PayloadReader {
         }
 
         while (this.dataOffset < this.dataBuffer.byteLength) {
-            if (this.state === State.FIND_SYNC) {
+            if (this.state === AdtsReaderState.FIND_SYNC) {
                 this.findNextSync();
-            } else if (this.state === State.READ_HEADER) {
-                if (this.dataBuffer.byteLength - this.dataOffset < (AdtsReader.ADTS_HEADER_SIZE +
-                    AdtsReader.ADTS_SYNC_SIZE)) {
+            } else if (this.state === AdtsReaderState.READ_HEADER) {
+                if (this.dataBuffer.byteLength - this.dataOffset
+                    < AdtsReader.ADTS_SYNC_AND_HEADER_LEN) {
                     break;
                 }
                 this.parseAACHeader();
-            } else if (this.state === State.READ_FRAME) {
-                if ((this.dataBuffer.byteLength - this.dataOffset) < (AdtsReader.ADTS_SYNC_SIZE +
-                    AdtsReader.ADTS_HEADER_SIZE + this.currentFrameSize)) {
+            } else if (this.state === AdtsReaderState.READ_FRAME) {
+                if (this.dataBuffer.byteLength - this.dataOffset
+                    < this.currentPayloadUnitLen) {
                     break;
                 }
-                this.frames.push(new Frame(Frame.IDR_FRAME, this.timeUs, this.currentFrameSize,
-                        this.frameDuration, this.dataOffset));
-                this.timeUs = this.timeUs + this.frameDuration;
 
-                this.dataOffset += (AdtsReader.ADTS_SYNC_SIZE + AdtsReader.ADTS_HEADER_SIZE +
-                    this.currentFrameSize);
-                this.state = State.FIND_SYNC;
+                this.frames.push(new Frame(
+                    FRAME_TYPE.NONE,
+                    this.timeUs,
+                    this.currentPayloadUnitLen,
+                    this.frameDuration,
+                    this.dataOffset));
+
+                this.onData(this.dataBuffer.subarray(
+                    this.dataOffset + AdtsReader.ADTS_SYNC_AND_HEADER_LEN,
+                    this.dataOffset + this.currentPayloadUnitLen));
+
+                this.dataOffset += this.currentPayloadUnitLen;
+
+                this.timeUs = this.timeUs + this.frameDuration;
+                this.state = AdtsReaderState.FIND_SYNC;
             }
         }
 
@@ -85,7 +91,7 @@ export class AdtsReader extends PayloadReader {
             if ((dataRead & 0xfff6) === 0xfff0) {
                 this.dataOffset = i;
                 if (this.dataOffset < this.dataBuffer.byteLength) {
-                    this.state = State.READ_HEADER;
+                    this.state = AdtsReaderState.READ_HEADER;
                 }
                 return;
             }
@@ -95,8 +101,10 @@ export class AdtsReader extends PayloadReader {
     }
 
     private parseAACHeader(): void {
-        const aacHeaderParser: BitReader = new BitReader(this.dataBuffer.subarray(this.dataOffset,
-            this.dataOffset + AdtsReader.ADTS_SYNC_SIZE + AdtsReader.ADTS_HEADER_SIZE));
+        const aacHeaderParser: BitReader = new BitReader(
+            this.dataBuffer.subarray(
+                this.dataOffset,
+                this.dataOffset + AdtsReader.ADTS_SYNC_AND_HEADER_LEN));
 
         aacHeaderParser.skipBits(15);
         const hasCrc: boolean = !aacHeaderParser.readBool();
@@ -114,13 +122,13 @@ export class AdtsReader extends PayloadReader {
         this.channels = aacHeaderParser.readBits(3);
 
         aacHeaderParser.skipBits(4);
-        this.currentFrameSize = aacHeaderParser.readBits(13) - AdtsReader.ADTS_HEADER_SIZE
-            - AdtsReader.ADTS_SYNC_SIZE;
+
+        this.currentPayloadUnitLen = aacHeaderParser.readBits(13);
 
         if (hasCrc) {
-            this.currentFrameSize -= AdtsReader.ADTS_CRC_SIZE;
+            this.currentPayloadUnitLen -= AdtsReader.ADTS_CRC_SIZE;
         }
 
-        this.state = State.READ_FRAME;
+        this.state = AdtsReaderState.READ_FRAME;
     }
 }
