@@ -156,7 +156,6 @@ export class H264Reader extends PayloadReader {
         sliceParser.skipBytes(4);
         sliceParser.readUEG();
         const sliceType: SLICE_TYPE = sliceParser.readUEG();
-        sliceParser.destroy();
 
         const frameType: FRAME_TYPE = mapNaluSliceToFrameType(sliceType);
         this.addFrame(frameType, end - start - NALU_DELIM_LEN, NaN);

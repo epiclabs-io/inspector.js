@@ -11,10 +11,6 @@ export class BitReader {
         this.loadWord();
     }
 
-    public destroy(): void {
-        this.buffer = null;
-    }
-
     public remainingBytes(): number {
         return this.workingBytesAvailable + this.workingBitsAvailable / 8;
     }

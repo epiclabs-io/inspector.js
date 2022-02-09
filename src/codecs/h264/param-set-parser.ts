@@ -49,8 +49,6 @@ export class H264ParameterSetParser {
         const spsId: number = gb.readUEG();
         const entropyCodingMode: boolean = gb.readBool();
 
-        gb.destroy();
-
         return new Pps(id, spsId, entropyCodingMode);
     }
 
@@ -237,9 +235,6 @@ export class H264ParameterSetParser {
         codec_height -= (frame_crop_top_offset + frame_crop_bottom_offset) * crop_unit_y;
 
         const present_width: number = Math.ceil(codec_width * sarScale);
-
-        gb.destroy();
-        gb = null;
 
         return new Sps(
             seq_parameter_set_id,
