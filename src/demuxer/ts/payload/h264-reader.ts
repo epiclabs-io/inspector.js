@@ -134,10 +134,10 @@ export class H264Reader extends PayloadReader {
             this.parseSliceNALUnit(naluData);
             break;
         case NAL_UNIT_TYPE.IDR:
-            this.addFrame(FRAME_TYPE.I, end - start - NALU_DELIM_LEN, NaN);
+            this.addFrame(FRAME_TYPE.I, naluData, NaN);
             break;
         case NAL_UNIT_TYPE.SPS:
-            this.parseSPSNALUnit(start, end);
+            this.parseSPSNALUnit(naluData);
             break;
         case NAL_UNIT_TYPE.PPS:
             this.pps = true;
@@ -149,8 +149,9 @@ export class H264Reader extends PayloadReader {
         this.onData(naluData);
     }
 
-    private parseSPSNALUnit(start: number, end: number): void {
-        this.sps = H264ParameterSetParser.parseSPS(this.dataBuffer.subarray(start + 4, end));
+    private parseSPSNALUnit(naluData: Uint8Array): void {
+        // skip first byte NALU-header for SPS-parser func input (expects only payload)
+        this.sps = H264ParameterSetParser.parseSPS(naluData.subarray(1));
     }
 
     private parseSliceNALUnit(naluData: Uint8Array): void {
@@ -159,13 +160,12 @@ export class H264Reader extends PayloadReader {
         sliceParser.skipBytes(1);
         sliceParser.readUEG();
         const sliceType: SLICE_TYPE = sliceParser.readUEG();
-        const frameType: FRAME_TYPE = mapNaluSliceToFrameType(sliceType);
 
-        this.addFrame(frameType, naluData.byteLength, NaN);
+        this.addFrame(mapNaluSliceToFrameType(sliceType), naluData, NaN);
     }
 
-    private addFrame(frameType: FRAME_TYPE, frameSize: number, duration: number): void {
-        const frame = new Frame(frameType, this.timeUs, frameSize, duration);
+    private addFrame(frameType: FRAME_TYPE, naluData: Uint8Array, duration: number): void {
+        const frame = new Frame(frameType, this.timeUs, naluData.byteLength, duration);
         this.frames.push(frame);
     }
 
