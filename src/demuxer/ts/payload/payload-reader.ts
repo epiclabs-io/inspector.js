@@ -9,8 +9,6 @@ export abstract class PayloadReader {
 
     protected dataOffset: number = 0;
 
-    private firstPacketDataOffset: number;
-
     constructor() {
         this.reset();
     }
@@ -21,16 +19,13 @@ export abstract class PayloadReader {
 
     public append(packet: BitReader): void {
 
-        if (isNaN(this.firstPacketDataOffset)) {
-            this.firstPacketDataOffset = packet.buffer.byteOffset + packet.bytesOffset();
-        }
-
-        const dataToAppend: Uint8Array = packet.buffer.subarray(packet.bytesOffset());
+        const packetReaderOffset = packet.bytesOffset();
+        const dataToAppend: Uint8Array = packet.buffer.subarray(packetReaderOffset);
 
         if (!this.dataBuffer) {
             this.dataBuffer = dataToAppend;
         } else {
-            const newLen: number = this.dataBuffer.byteLength + packet.remainingBytes();
+            const newLen: number = this.dataBuffer.byteLength + dataToAppend.byteLength;
             const temp: Uint8Array = new Uint8Array(newLen);
             temp.set(this.dataBuffer, 0);
             temp.set(dataToAppend, this.dataBuffer.byteLength);
@@ -76,9 +71,5 @@ export abstract class PayloadReader {
 
     public getLastPTS(): number {
         return this.timeUs;
-    }
-
-    public getFirstPacketDataOffset(): number {
-        return this.firstPacketDataOffset;
     }
 }
