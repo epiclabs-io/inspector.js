@@ -1,4 +1,5 @@
 import { BitReader } from '../../utils/bit-reader';
+import { mpegClockTimeToMicroSecs } from '../../utils/timescale';
 import { PayloadReader } from './payload/payload-reader';
 import { UnknownReader } from './payload/unknown-reader';
 import { AdtsReader } from './payload/adts-reader';
@@ -16,14 +17,12 @@ export class PESReader {
 
     public payloadReader: PayloadReader;
 
-    private lastPtsUs: number;
-    private pesLength: number;
+    private lastDtsUs: number;
 
     constructor(public pid: number, public type: number) {
         this.pid = pid;
         this.type = type;
-        this.lastPtsUs = -1;
-        this.pesLength = 0;
+        this.lastDtsUs = -1;
 
         if (type === PESReader.TS_STREAM_TYPE_AAC) {
             this.payloadReader = new AdtsReader();
@@ -38,16 +37,14 @@ export class PESReader {
         } else {
             this.payloadReader = new UnknownReader();
         }
-    }
 
-    public static ptsToTimeUs(pts: number): number {
-        return (pts * 1000000) / 90000;
+        this.payloadReader.onData = this.onPayloadReaderData.bind(this);
     }
 
     public appendData(payloadUnitStartIndicator: boolean, packet: BitReader): void {
         if (payloadUnitStartIndicator) {
             if (this.payloadReader) {
-                this.payloadReader.read(this.lastPtsUs);
+                this.payloadReader.read(this.lastDtsUs);
             }
             this.parsePESHeader(packet);
         }
@@ -60,8 +57,12 @@ export class PESReader {
     public parsePESHeader(packet: BitReader): void {
         packet.skipBytes(7);
 
+
         const [dts, pts] = this.readPesTimingInfo(packet);
-        this.lastPtsUs = PESReader.ptsToTimeUs(pts);
+
+
+        // Note: Using DTS here, not PTS, to avoid ordering issues.
+        this.lastDtsUs = mpegClockTimeToMicroSecs(dts);
     }
 
     public reset(): void {
@@ -72,8 +73,12 @@ export class PESReader {
 
     public flush(): void {
         if (this.payloadReader) {
-            this.payloadReader.flush(this.lastPtsUs);
+            this.payloadReader.flush(this.lastDtsUs);
         }
+    }
+
+    private onPayloadReaderData(data: Uint8Array) {
+
     }
 
     private readPesTimingInfo(packet: BitReader): [number, number]  {
