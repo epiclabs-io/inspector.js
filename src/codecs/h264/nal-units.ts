@@ -11,7 +11,19 @@ export enum NAL_UNIT_TYPE {
     PPS,
     AUD,
     END_SEQUENCE,
-    END_STREAM
+    END_STREAM,
+    FILLER_DATA,
+    SPS_EXT,
+    PREFIX,
+    SUBSET_SPS,
+    RESERVED_16,
+    RESERVED_17,
+    RESERVED_18,
+    SLICE_AUX_PIC,
+    SLICE_EXT,
+    SLICE_EXT_DEPTH,
+    RESERVED_22,
+    RESERVED_23
 }
 
 export enum SLICE_TYPE {
