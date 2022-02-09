@@ -58,7 +58,7 @@ export class PESReader {
         packet.skipBytes(7);
 
 
-        const [dts, pts] = this.readPesTimingInfo(packet);
+        const [dts, pts] = PESReader.readTimingInfo(packet);
 
 
         // Note: Using DTS here, not PTS, to avoid ordering issues.
@@ -81,7 +81,7 @@ export class PESReader {
 
     }
 
-    private readPesTimingInfo(packet: BitReader): [number, number]  {
+    private static readTimingInfo(packet: BitReader): [number, number]  {
         /**
          * Thanks to Videojs/Muxjs for this bit, which does well the
          * trick around 32-bit unary bit-ops and 33 bit numbers :)
