@@ -8,3 +8,7 @@ export function toSecondsFromMicros(us) {
     return us / MICROSECOND_TIMESCALE;
 }
 
+export function mpegClockTimeToMicroSecs(time: number): number {
+    return toMicroseconds(time, 90000);
+}
+
