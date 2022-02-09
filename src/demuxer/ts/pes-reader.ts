@@ -33,7 +33,7 @@ export class PESReader {
         } else if (type === PESReader.TS_STREAM_TYPE_MPA || type === PESReader.TS_STREAM_TYPE_MPA_LSF) {
             this.payloadReader = new MpegReader();
         } else if (type === PESReader.TS_STREAM_TYPE_METADATA) {
-            // do nothing
+            this.payloadReader = new UnknownReader();
         } else {
             this.payloadReader = new UnknownReader();
         }
@@ -43,45 +43,36 @@ export class PESReader {
 
     public appendData(payloadUnitStartIndicator: boolean, packet: BitReader): void {
         if (payloadUnitStartIndicator) {
-            if (this.payloadReader) {
-                this.payloadReader.read(this.lastDtsUs);
-            }
-            this.parsePESHeader(packet);
+            this.payloadReader.read(this.lastDtsUs);
+            this.readHeader(packet);
         }
 
-        if (this.payloadReader) {
-            this.payloadReader.append(packet);
-        }
+        this.payloadReader.append(packet);
     }
 
-    public parsePESHeader(packet: BitReader): void {
+    public reset(): void {
+        this.payloadReader.reset();
+    }
+
+    public flush(): void {
+        this.payloadReader.flush(this.lastDtsUs);
+    }
+
+    private readHeader(packet: BitReader): void {
         packet.skipBytes(7);
 
-
-        const [dts, pts] = PESReader.readTimingInfo(packet);
+        const [dts, pts] = PESReader.parseTimingInfo(packet);
 
 
         // Note: Using DTS here, not PTS, to avoid ordering issues.
         this.lastDtsUs = mpegClockTimeToMicroSecs(dts);
     }
 
-    public reset(): void {
-        if (this.payloadReader) {
-            this.payloadReader.reset();
-        }
-    }
-
-    public flush(): void {
-        if (this.payloadReader) {
-            this.payloadReader.flush(this.lastDtsUs);
-        }
-    }
-
     private onPayloadReaderData(data: Uint8Array) {
 
     }
 
-    private static readTimingInfo(packet: BitReader): [number, number]  {
+    private static parseTimingInfo(packet: BitReader): [number, number] {
         /**
          * Thanks to Videojs/Muxjs for this bit, which does well the
          * trick around 32-bit unary bit-ops and 33 bit numbers :)
