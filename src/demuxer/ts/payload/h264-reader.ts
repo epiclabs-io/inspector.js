@@ -127,9 +127,11 @@ export class H264Reader extends PayloadReader {
 
     private processNalu(start: number, end: number, nalType: number): void {
 
+        const naluData = this.dataBuffer.subarray(start + NALU_DELIM_LEN, end);
+
         switch(nalType) {
         case NAL_UNIT_TYPE.SLICE:
-            this.parseSliceNALUnit(start, end);
+            this.parseSliceNALUnit(naluData);
             break;
         case NAL_UNIT_TYPE.IDR:
             this.addFrame(FRAME_TYPE.I, end - start - NALU_DELIM_LEN, NaN);
@@ -144,21 +146,22 @@ export class H264Reader extends PayloadReader {
             break;
         }
 
-        this.onData(this.dataBuffer.subarray(start + NALU_DELIM_LEN, end));
+        this.onData(naluData);
     }
 
     private parseSPSNALUnit(start: number, end: number): void {
         this.sps = H264ParameterSetParser.parseSPS(this.dataBuffer.subarray(start + 4, end));
     }
 
-    private parseSliceNALUnit(start: number, end: number): void {
-        const sliceParser: BitReader = new BitReader(this.dataBuffer.subarray(start, end));
-        sliceParser.skipBytes(4);
+    private parseSliceNALUnit(naluData: Uint8Array): void {
+        const sliceParser: BitReader = new BitReader(naluData);
+
+        sliceParser.skipBytes(1);
         sliceParser.readUEG();
         const sliceType: SLICE_TYPE = sliceParser.readUEG();
-
         const frameType: FRAME_TYPE = mapNaluSliceToFrameType(sliceType);
-        this.addFrame(frameType, end - start - NALU_DELIM_LEN, NaN);
+
+        this.addFrame(frameType, naluData.byteLength, NaN);
     }
 
     private addFrame(frameType: FRAME_TYPE, frameSize: number, duration: number): void {
