@@ -14,10 +14,6 @@ export class H264Reader extends PayloadReader {
 
     public pendingBytes: number = 0;
 
-    constructor() {
-        super();
-    }
-
     public getMimeType(): string {
         return Track.MIME_TYPE_AVC;
     }
@@ -33,9 +29,8 @@ export class H264Reader extends PayloadReader {
         if (!Number.isFinite(nextNalUnit)) {
             return;
         }
-        this.processNalu(nextNalUnit,
-            this.dataBuffer.byteLength,
-            this.readNaluHeadAt(nextNalUnit));
+
+        this.readNaluData(nextNalUnit, this.dataBuffer.byteLength);
     }
 
     public reset(): void {
@@ -58,8 +53,7 @@ export class H264Reader extends PayloadReader {
             if (!Number.isFinite(nextNalUnit)) {
                 return;
             }
-            this.processNalu(0, nextNalUnit, this.readNaluHeadAt(firstNalUnit));
-            firstNalUnit = nextNalUnit;
+            firstNalUnit = this.readNaluData(firstNalUnit, nextNalUnit);
         } else {
             firstNalUnit = this.findNextNalu();
             if (!Number.isFinite(firstNalUnit)) {
@@ -89,10 +83,7 @@ export class H264Reader extends PayloadReader {
                 break;
             }
 
-            this.processNalu(firstNalUnit, nextNalUnit,
-                this.readNaluHeadAt(firstNalUnit));
-
-            firstNalUnit = nextNalUnit;
+            firstNalUnit = this.readNaluData(firstNalUnit, nextNalUnit);
         }
 
         // prune data-buffer
@@ -119,15 +110,15 @@ export class H264Reader extends PayloadReader {
         return NaN;
     }
 
-    private readNaluHeadAt(offset: number): number {
-        // TODO: check for invalid values
-        // (can be if buffer begin/remainder is garbage)
-        return this.dataBuffer[offset + NALU_DELIM_LEN] & 0x1F;
-    }
-
-    private processNalu(start: number, end: number, nalType: number): void {
+    /**
+     * @returns end offset
+     */
+    private readNaluData(start: number, end: number): number {
 
         const naluData = this.dataBuffer.subarray(start + NALU_DELIM_LEN, end);
+        // TODO: check for invalid values
+        // (can be if buffer begin/remainder is garbage)
+        const nalType = naluData[0] & 0x1F;
 
         switch(nalType) {
         case NAL_UNIT_TYPE.SLICE:
@@ -147,6 +138,8 @@ export class H264Reader extends PayloadReader {
         }
 
         this.onData(naluData);
+
+        return end;
     }
 
     private parseSPSNALUnit(naluData: Uint8Array): void {
