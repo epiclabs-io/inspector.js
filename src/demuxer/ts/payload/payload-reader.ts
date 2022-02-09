@@ -45,9 +45,9 @@ export abstract class PayloadReader {
         this.timeUs = -1;
     }
 
-    public flush(pts: number): void {
+    public flush(time: number): void {
         if (this.dataBuffer && this.dataBuffer.byteLength > 0) {
-            this.read(pts);
+            this.read(time);
             this.dataBuffer = null;
         }
         this.dataOffset = 0;
