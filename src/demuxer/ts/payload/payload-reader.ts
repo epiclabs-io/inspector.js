@@ -3,7 +3,7 @@ import { Frame } from '../../frame';
 
 export abstract class PayloadReader {
     public firstTimestamp: number = -1;
-    public timeUs: number = -1;
+    public timeUs: number = -1; // FIXME: use NaN instead of -1 !
     public frames: Frame[] = [];
     public dataBuffer: Uint8Array;
 
@@ -13,9 +13,9 @@ export abstract class PayloadReader {
         this.reset();
     }
 
-    public abstract read(pts: number): void;
+    public abstract read(time: number): void;
 
-    public onData(data: Uint8Array) {}
+    public onData(data: Uint8Array, time: number, naluType?: number) {}
 
     public append(packet: BitReader): void {
 

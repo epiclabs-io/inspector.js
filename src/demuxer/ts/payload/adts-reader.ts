@@ -71,7 +71,8 @@ export class AdtsReader extends PayloadReader {
 
                 this.onData(this.dataBuffer.subarray(
                     this.dataOffset + AdtsReader.ADTS_SYNC_AND_HEADER_LEN,
-                    this.dataOffset + this.currentPayloadUnitLen));
+                    this.dataOffset + this.currentPayloadUnitLen),
+                    this.timeUs);
 
                 this.dataOffset += this.currentPayloadUnitLen;
 

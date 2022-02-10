@@ -67,7 +67,6 @@ export class H264Reader extends PayloadReader {
         // why do we need to set this superclass prop here
         // as it gets passed in from the call arg... ?
 
-        // FIXME: use NaN instead of -1
         if (this.firstTimestamp === -1) {
             this.timeUs = this.firstTimestamp = timeUs;
         }
@@ -111,24 +110,24 @@ export class H264Reader extends PayloadReader {
     }
 
     /**
-     * @returns end offset
+     * @param begin offset (inclusive)
+     * @param end offset (exclusive)
+     * @returns end offset (exclusive) as input
      */
-    private readNaluData(start: number, end: number): number {
+    private readNaluData(begin: number, end: number): number {
 
-        const naluData = this.dataBuffer.subarray(start + NALU_DELIM_LEN, end);
-        // TODO: check for invalid values
-        // (can be if buffer begin/remainder is garbage)
-        const nalType = naluData[0] & 0x1F;
+        const naluData = this.dataBuffer.subarray(begin + NALU_DELIM_LEN, end);
 
-        switch(nalType) {
+        const naluType = naluData[0] & 0x1F;
+        switch(naluType) {
         case NAL_UNIT_TYPE.SLICE:
-            this.parseSliceNALUnit(naluData);
+            this.parseNonIdrPicSlice(naluData);
             break;
         case NAL_UNIT_TYPE.IDR:
-            this.addFrame(FRAME_TYPE.I, naluData, NaN);
+            this.addFrame(FRAME_TYPE.I, naluData);
             break;
         case NAL_UNIT_TYPE.SPS:
-            this.parseSPSNALUnit(naluData);
+            this.parseSps(naluData);
             break;
         case NAL_UNIT_TYPE.PPS:
             this.pps = true;
@@ -137,28 +136,27 @@ export class H264Reader extends PayloadReader {
             break;
         }
 
-        this.onData(naluData);
-
+        this.onData(naluData, this.timeUs, naluType);
         return end;
     }
 
-    private parseSPSNALUnit(naluData: Uint8Array): void {
+    private parseSps(naluData: Uint8Array): void {
         // skip first byte NALU-header for SPS-parser func input (expects only payload)
         this.sps = H264ParameterSetParser.parseSPS(naluData.subarray(1));
     }
 
-    private parseSliceNALUnit(naluData: Uint8Array): void {
+    private parseNonIdrPicSlice(naluData: Uint8Array): void {
         const sliceParser: BitReader = new BitReader(naluData);
 
         sliceParser.skipBytes(1);
         sliceParser.readUEG();
         const sliceType: SLICE_TYPE = sliceParser.readUEG();
 
-        this.addFrame(mapNaluSliceToFrameType(sliceType), naluData, NaN);
+        this.addFrame(mapNaluSliceToFrameType(sliceType), naluData);
     }
 
-    private addFrame(frameType: FRAME_TYPE, naluData: Uint8Array, duration: number): void {
-        const frame = new Frame(frameType, this.timeUs, naluData.byteLength, duration);
+    private addFrame(frameType: FRAME_TYPE, naluData: Uint8Array): void {
+        const frame = new Frame(frameType, this.timeUs, naluData.byteLength, NaN);
         this.frames.push(frame);
     }
 
