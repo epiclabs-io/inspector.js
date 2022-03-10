@@ -1,11 +1,12 @@
 import { BitReader } from '../../utils/bit-reader';
-import { mpegClockTimeToMicroSecs } from '../../utils/timescale';
+import { mpegClockTimeToMicroSecs, MPEG_CLOCK_HZ, toSecondsFromMicros } from '../../utils/timescale';
 import { PayloadReader } from './payload/payload-reader';
 import { UnknownReader } from './payload/unknown-reader';
 import { AdtsReader } from './payload/adts-reader';
 import { H264Reader } from './payload/h264-reader';
 import { ID3Reader } from './payload/id3-reader';
 import { MpegReader } from './payload/mpeg-reader';
+import { NAL_UNIT_TYPE } from '../../codecs/h264/nal-units';
 
 function parsePesHeaderTimestamps(packet: BitReader): [number, number] {
     /**
@@ -51,13 +52,16 @@ function parsePesHeaderTimestamps(packet: BitReader): [number, number] {
     return [dts, pts];
 }
 
+export enum MptsElementaryStreamType {
+    TS_STREAM_TYPE_AAC = 0x0F,
+    TS_STREAM_TYPE_H264 = 0x1B,
+    TS_STREAM_TYPE_ID3 = 0x15,
+    TS_STREAM_TYPE_MPA = 0x03,
+    TS_STREAM_TYPE_MPA_LSF = 0x04,
+    TS_STREAM_TYPE_METADATA = 0x06
+}
+
 export class PESReader {
-    public static TS_STREAM_TYPE_AAC: number = 0x0F;
-    public static TS_STREAM_TYPE_H264: number = 0x1B;
-    public static TS_STREAM_TYPE_ID3: number = 0x15;
-    public static TS_STREAM_TYPE_MPA: number = 0x03;
-    public static TS_STREAM_TYPE_MPA_LSF: number = 0x04;
-    public static TS_STREAM_TYPE_METADATA: number = 0x06;
 
     public payloadReader: PayloadReader;
 
@@ -65,32 +69,33 @@ export class PESReader {
     private lastDtsUs: number = -1; // TODO: migrate to integer/timescale values, causing FLOP-precision errors !!!
     private lastCtoUs: number = NaN;
 
-    constructor(public pid: number, public type: number) {
+    constructor(public pid: number, public type: MptsElementaryStreamType) {
 
-        if (type === PESReader.TS_STREAM_TYPE_AAC) {
+        if (type === MptsElementaryStreamType.TS_STREAM_TYPE_AAC) {
             this.payloadReader = new AdtsReader();
-        } else if (type === PESReader.TS_STREAM_TYPE_H264) {
+        } else if (type === MptsElementaryStreamType.TS_STREAM_TYPE_H264) {
             this.payloadReader = new H264Reader();
-        } else if (type === PESReader.TS_STREAM_TYPE_ID3) {
+        } else if (type === MptsElementaryStreamType.TS_STREAM_TYPE_ID3) {
             this.payloadReader = new ID3Reader();
-        } else if (type === PESReader.TS_STREAM_TYPE_MPA || type === PESReader.TS_STREAM_TYPE_MPA_LSF) {
+        } else if (type === MptsElementaryStreamType.TS_STREAM_TYPE_MPA || type === MptsElementaryStreamType.TS_STREAM_TYPE_MPA_LSF) {
             this.payloadReader = new MpegReader();
-        } else if (type === PESReader.TS_STREAM_TYPE_METADATA) {
+        } else if (type === MptsElementaryStreamType.TS_STREAM_TYPE_METADATA) {
             this.payloadReader = new UnknownReader();
         } else {
             this.payloadReader = new UnknownReader();
         }
 
-        this.payloadReader.onData = this.onPayloadReaderData.bind(this);
+        this.payloadReader.onData = this.handlePayloadReadData.bind(this);
     }
+
+    public onPayloadData(data: Uint8Array, timeUs: number) {}
 
     public appendData(payloadUnitStartIndicator: boolean, packet: BitReader): void {
         if (payloadUnitStartIndicator) {
             this.payloadReader.read(this.lastDtsUs);
             this.readHeader(packet);
         }
-
-        this.payloadReader.append(packet);
+        this.payloadReader.append(packet, payloadUnitStartIndicator);
     }
 
     public reset(): void {
@@ -112,6 +117,9 @@ export class PESReader {
         this.lastCtoUs = mpegClockTimeToMicroSecs(pts - dts);
     }
 
-    private onPayloadReaderData(data: Uint8Array, timeUs: number, naluType: number) {
+    private handlePayloadReadData(data: Uint8Array, timeUs: number, naluType: number = NaN) {
+        if (!this.payloadReader.frames.length) return;
+        const timeSecs = toSecondsFromMicros(timeUs);
+        this.onPayloadData(data, timeSecs);
     }
 }
