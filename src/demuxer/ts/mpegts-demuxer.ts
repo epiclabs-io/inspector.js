@@ -1,5 +1,5 @@
 import { BitReader } from '../../utils/bit-reader';
-import { PESReader } from './pes-reader';
+import { MptsElementaryStreamType, PESReader } from './pes-reader';
 import { TSTrack } from './ts-track';
 import { Track } from '../track';
 import { IDemuxer } from '../demuxer';
@@ -16,22 +16,16 @@ export class MpegTSDemuxer implements IDemuxer {
     private static MPEGTS_PACKET_SIZE: number = 188;
     private static MPEGTS_PACKET_SIZE_MINUS_ONE: number = 187;
 
-    public tracks: { [id: number] : TSTrack; };
+    public tracks: { [id: number] : TSTrack; } = {};
+
+    private containerType: CONTAINER_TYPE = CONTAINER_TYPE.UNKNOWN;
 
     private data: Uint8Array;
     private dataOffset: number;
-    private containerType: number;
-    private pmtParsed: boolean;
-    private packetsCount: number;
-    private pmtId: number;
 
-    constructor () {
-        this.containerType = CONTAINER_TYPE.UNKNOWN;
-        this.pmtParsed = false;
-        this.packetsCount = 0;
-        this.pmtId = -1;
-        this.tracks = {};
-    }
+    private packetsCount: number = 0;
+    private pmtId: number = -1;
+    private pmtParsed: boolean = false;
 
     get currentBufferSize(): number {
         return this?.data.byteLength || 0;
@@ -111,7 +105,7 @@ export class MpegTSDemuxer implements IDemuxer {
             const streamReader: BitReader = new BitReader(this.data);
             this.tracks[0] = new TSTrack(0,
                 Track.TYPE_AUDIO, Track.MIME_TYPE_AAC,
-                new PESReader(0, PESReader.TS_STREAM_TYPE_AAC));
+                new PESReader(0, MptsElementaryStreamType.TS_STREAM_TYPE_AAC));
             this.tracks[0].pes.appendData(false, streamReader);
         }
     }
@@ -133,6 +127,8 @@ export class MpegTSDemuxer implements IDemuxer {
     }
 
     private findContainerType(): void {
+        if (this.containerType !== CONTAINER_TYPE.UNKNOWN) return;
+
         while (this.dataOffset < this.data.byteLength) {
             if (this.data[this.dataOffset] === MpegTSDemuxer.MPEGTS_SYNC) {
                 this.containerType = CONTAINER_TYPE.MPEG_TS;
@@ -234,19 +230,19 @@ export class MpegTSDemuxer implements IDemuxer {
                 const pes: PESReader = new PESReader(elementaryPid, streamType);
                 let type: string;
                 let mimeType: string;
-                if (streamType === PESReader.TS_STREAM_TYPE_AAC) {
+                if (streamType === MptsElementaryStreamType.TS_STREAM_TYPE_AAC) {
                     type = Track.TYPE_AUDIO;
                     mimeType = Track.MIME_TYPE_AAC;
-                } else if (streamType === PESReader.TS_STREAM_TYPE_H264) {
+                } else if (streamType === MptsElementaryStreamType.TS_STREAM_TYPE_H264) {
                     type = Track.TYPE_VIDEO;
                     mimeType = Track.MIME_TYPE_AVC;
-                } else if (streamType === PESReader.TS_STREAM_TYPE_ID3) {
+                } else if (streamType === MptsElementaryStreamType.TS_STREAM_TYPE_ID3) {
                     type = Track.TYPE_TEXT;
                     mimeType = Track.MIME_TYPE_ID3;
-                } else if (streamType === PESReader.TS_STREAM_TYPE_MPA || streamType === PESReader.TS_STREAM_TYPE_MPA_LSF) {
+                } else if (streamType === MptsElementaryStreamType.TS_STREAM_TYPE_MPA || streamType === MptsElementaryStreamType.TS_STREAM_TYPE_MPA_LSF) {
                     type = Track.TYPE_AUDIO;
                     mimeType = Track.MIME_TYPE_MPEG;
-                } else if (streamType === PESReader.TS_STREAM_TYPE_METADATA) {
+                } else if (streamType === MptsElementaryStreamType.TS_STREAM_TYPE_METADATA) {
                     // do nothing
                 } else {
                     type = Track.TYPE_UNKNOWN;
