@@ -20,8 +20,8 @@ export class TSTrack extends Track {
         return this?.pes?.payloadReader.frames || [];
     }
 
-    public popFrames(): Frame[] {
-        return this?.pes?.payloadReader.popFrames() || [];
+    public popFrames(wholePayloadUnits: boolean = true): Frame[] {
+        return this.pes?.payloadReader?.popFrames(wholePayloadUnits) || [];
     }
 
     public getMetadata(): {} {
