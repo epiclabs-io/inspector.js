@@ -88,7 +88,7 @@ export class PESReader {
         this.payloadReader.onData = this.handlePayloadReadData.bind(this);
     }
 
-    public onPayloadData(data: Uint8Array, timeUs: number) {}
+    public onPayloadData(data: Uint8Array, timeUs: number, naluType: number) {}
 
     public appendData(payloadUnitStartIndicator: boolean, packet: BitReader): void {
         if (payloadUnitStartIndicator) {
@@ -120,6 +120,6 @@ export class PESReader {
     private handlePayloadReadData(data: Uint8Array, timeUs: number, naluType: number = NaN) {
         if (!this.payloadReader.frames.length) return;
         const timeSecs = toSecondsFromMicros(timeUs);
-        this.onPayloadData(data, timeSecs);
+        this.onPayloadData(data, timeSecs, naluType);
     }
 }

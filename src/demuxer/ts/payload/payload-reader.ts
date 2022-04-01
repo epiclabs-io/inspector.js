@@ -10,8 +10,8 @@ export abstract class PayloadReader {
 
     protected dataOffset: number = 0;
 
-    private framesPusiCount: number = 0;
-    private framesCurrentPusiLen: number = 0;
+    private pusiCount: number = 0;
+    private lastPusiFramesLen: number = 0;
 
     constructor() {
         this.reset();
@@ -37,11 +37,15 @@ export abstract class PayloadReader {
         return this.timeUs;
     }
 
+    public getPusiCount() {
+        return this.pusiCount;
+    }
+
     public append(packet: BitReader, payloadUnitStartIndicator: boolean): void {
 
         if (payloadUnitStartIndicator) {
-            this.framesPusiCount++;
-            this.framesCurrentPusiLen = this.frames.length;
+            this.pusiCount++;
+            this.lastPusiFramesLen = this.frames.length;
         }
 
         const packetReaderOffset = packet.bytesOffset();
@@ -60,8 +64,8 @@ export abstract class PayloadReader {
 
     public reset(): void {
         this.frames.length = 0;
-        this.framesPusiCount = 0;
-        this.framesCurrentPusiLen = 0;
+        this.pusiCount = 0;
+        this.lastPusiFramesLen = 0;
         this.dataOffset = 0;
         this.firstTimestamp = -1;
         this.timeUs = -1;
@@ -76,13 +80,14 @@ export abstract class PayloadReader {
     }
 
     public popFrames(wholePayloadUnits: boolean = true): Frame[] {
-        let numFrames = wholePayloadUnits ? this.framesCurrentPusiLen : this.frames.length;
+        let numFrames = wholePayloadUnits ? this.lastPusiFramesLen : this.frames.length;
         if (numFrames === 0) return [];
         // split-slice frame-list:
         // returns slice to pop, mutates list to remainder (deletes sliced items)
         const frames = this.frames.splice(0, numFrames);
         // set current payload-unit frame-count to remainder length
-        this.framesCurrentPusiLen = this.frames.length;
+        this.lastPusiFramesLen = this.frames.length;
+        this.pusiCount = 0;
         return frames;
     }
 }
