@@ -1,8 +1,9 @@
-import { BitReader } from '../../utils/bit-reader';
+import { IDemuxer } from '../demuxer';
+import { Track } from '../track';
+
 import { MptsElementaryStreamType, PESReader } from './pes-reader';
 import { TSTrack } from './ts-track';
-import { Track } from '../track';
-import { IDemuxer } from '../demuxer';
+import { BitReader } from '../../utils/bit-reader';
 
 enum CONTAINER_TYPE {
     UNKNOWN = 1,
@@ -24,7 +25,8 @@ export class MpegTSDemuxer implements IDemuxer {
     private dataOffset: number;
 
     private packetsCount: number = 0;
-    private pmtId: number = -1;
+
+    private pmtId: number = NaN;
     private pmtParsed: boolean = false;
 
     get currentBufferSize(): number {
@@ -35,8 +37,8 @@ export class MpegTSDemuxer implements IDemuxer {
         return this.packetsCount;
     }
 
-    get isPmtParsed(): boolean {
-        return this.isPmtParsed;
+    get isProgramMapUpdated(): boolean {
+        return this.pmtParsed;
     }
 
     public append(data: Uint8Array, pruneAfterParse: boolean = false): Uint8Array | null  {
@@ -93,7 +95,7 @@ export class MpegTSDemuxer implements IDemuxer {
         this.dataOffset = 0;
     }
 
-    public onPmtParsed() {};
+    public onProgramMapUpdate() {};
 
     private parse(): void {
 
@@ -191,6 +193,7 @@ export class MpegTSDemuxer implements IDemuxer {
                 this.parseProgramMapTable(payloadUnitStartIndicator, packetReader);
             } else {
                 const track: TSTrack = this.tracks[pid];
+                // handle case where PID not found?
                 if (track && track.pes) {
                     track.pes.appendData(payloadUnitStartIndicator, packetReader);
                 }
@@ -252,6 +255,6 @@ export class MpegTSDemuxer implements IDemuxer {
             }
         }
         this.pmtParsed = true;
-        this.onPmtParsed();
+        this.onProgramMapUpdate();
     }
 }
