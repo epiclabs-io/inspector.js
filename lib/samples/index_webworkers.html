@@ -1,32 +1,10 @@
-<!DOCTYPE html>
-<html ng-app="myApp">
-
-<head>
-  <meta charset="utf-8">
-  <meta http-equiv="x-ua-compatible" content="ie=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>
-    Webpack App
-  </title>
-  <meta name="description" content="Webpack App">
-
-  <style>
-    body {
+<!doctype html><html ng-app="myApp"><head><meta charset="utf-8"><meta http-equiv="x-ua-compatible" content="ie=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Webpack App</title><meta name="description" content="Webpack App"><style>body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif
     }
 
     #tracks {
       margin-top: 20px;
-    }
-  </style>
-<script type="text/javascript" src="../inspectorjs-lib.js"></script><script type="text/javascript" src="../inspectorjs-lib.min.js"></script></head>
-
-<body>
-  <h3>Example that demonstrate the use of Inspector.js using its WebWorker interface</h3>
-  <div id="tracks"></div>
-
-  <script>
-    if (typeof (Worker) === "undefined") {
+    }</style><script defer="defer" src="../inspectorjs-lib.js"></script><script defer="defer" src="../inspectorjs-lib.min.js"></script></head><body><h3>Example that demonstrate the use of Inspector.js using its WebWorker interface</h3><div id="tracks"></div><script>if (typeof (Worker) === "undefined") {
       alert('Sorry, web workers are not supported by your browser');
     } else {
       var worker = new Worker('../inspectorjs-lib.min.js');
@@ -104,8 +82,4 @@
       }
 
       inspectMedia('https://video-dev.github.io/streams/x36xhzz/url_0/url_462/193039199_mp4_h264_aac_hd_7.ts');
-    }
-  </script>
-</body>
-
-</html>
+    }</script></body></html>
