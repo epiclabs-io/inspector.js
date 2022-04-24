@@ -63,10 +63,6 @@ export class H264Reader extends PayloadReader {
 
         // post: firstNalUnit is finite number
 
-        // Q: for what else do we need this timeUs param, and
-        // why do we need to set this superclass prop here
-        // as it gets passed in from the call arg... ?
-
         if (this.firstTimestamp === -1) {
             this.timeUs = this.firstTimestamp = timeUs;
         }
