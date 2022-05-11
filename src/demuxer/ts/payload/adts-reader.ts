@@ -78,7 +78,7 @@ export class AdtsReader extends PayloadReader {
                 try {
                     this.parseHeader();
                 } catch (err) {
-                    console.debug(this);
+                    // console.debug(this);
                     throw new Error(`Error parsing header at ${this.dataOffset} / ${this.dataBuffer.byteLength}: ${(err as Error).message}`);
                 }
                 break;
