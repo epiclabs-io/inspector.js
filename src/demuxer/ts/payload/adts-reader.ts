@@ -78,8 +78,12 @@ export class AdtsReader extends PayloadReader {
                 try {
                     this.parseHeader();
                 } catch (err) {
-                    // console.debug(this);
-                    throw new Error(`Error parsing header at ${this.dataOffset} / ${this.dataBuffer.byteLength}: ${(err as Error).message}`);
+                    // data pointers will be nulled by reset call, so we need to make string first
+                    const errMsg = `Error parsing header at ${this.dataOffset} / ${this.dataBuffer.byteLength}: ${(err as Error).message}`;
+                    // console.debug(this); // only for debug !!
+                    this.reset();
+                    this.state = AdtsReaderState.FIND_SYNC;
+                    throw new Error(errMsg);
                 }
                 break;
 
@@ -211,9 +215,11 @@ export class AdtsReader extends PayloadReader {
             throw new Error(`Invalid AAC frame-number in ADTS header: ${nbOfAacFrames}`);
         }
 
+        /*
         if (nbOfAacFrames !== 1) {
             throw new Error(`Can not have AAC frame-number in ADTS header: ${nbOfAacFrames} (only 1 is supported in this compatibility mode)`);
         }
+        //*/
 
         this.state = AdtsReaderState.READ_FRAME;
     }
