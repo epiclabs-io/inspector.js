@@ -207,12 +207,15 @@ export class AdtsReader extends PayloadReader {
         // buffer fullness (ignoring so far, spec not clear about what it is really yet)
         br.skipBits(11);
 
-        // 1 ADTS frame can contain up to 4 AAC frames !
+        // 1 ADTS frame can contain up to 4 AAC frames
         const nbOfAacFrames = br.readBits(2) + 1;
         if (nbOfAacFrames <= 0) {
             throw new Error(`Invalid AAC frame-number in ADTS header: ${nbOfAacFrames}`);
         }
 
+        // FIXME: semantically our Frame info parsed represents potentially several AAC ones,
+        // with the same container PTS value however (precision could be inferred from
+        // sampling freq however).
         /*
         if (nbOfAacFrames !== 1) {
             throw new Error(`Can not have AAC frame-number in ADTS header: ${nbOfAacFrames} (only 1 is supported in this compatibility mode)`);
