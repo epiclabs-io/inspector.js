@@ -176,12 +176,10 @@ export class AdtsReader extends PayloadReader {
         this.profile = audioCodecProfile;
 
         const sampleRateIndex: number = br.readBits(4);
-
-        if (sampleRateIndex >= 0 && sampleRateIndex < AdtsReader.ADTS_SAMPLE_RATES.length) {
-            this.sampleRate = AdtsReader.ADTS_SAMPLE_RATES[sampleRateIndex];
-        } else {
+        if (sampleRateIndex < 0 && sampleRateIndex >= AdtsReader.ADTS_SAMPLE_RATES.length) {
             throw new Error(`Invalid AAC sampling-frequency index: ${sampleRateIndex}`);
         }
+        this.sampleRate = AdtsReader.ADTS_SAMPLE_RATES[sampleRateIndex];
         this.frameDuration = (MICROSECOND_TIMESCALE * 1024) / this.sampleRate;
 
         // private bit (unused by spec)
@@ -191,17 +189,19 @@ export class AdtsReader extends PayloadReader {
         if (channelsConf <= 0 || channelsConf >= 8) {
             throw new Error(`Channel configuration invalid value: ${channelsConf}`);
         }
-
         this.channels = channelsConf;
 
         // originality/home/copyright bits (ignoring)
         br.skipBits(4);
 
         const adtsFrameLen = br.readBits(13); // always including the header itself (w/ opt CRC 2 bytes)
-        if (adtsFrameLen <= 0) throw new Error(`Invalid ADTS-frame byte-length: ${adtsFrameLen}`);
+        if (adtsFrameLen <= 0) {
+            throw new Error(`Invalid ADTS-frame byte-length: ${adtsFrameLen}`);
+        }
 
         this.currentAdtsHeaderLen = hasCrc ?
-            AdtsReader.ADTS_HEADER_LEN + AdtsReader.ADTS_CRC_SIZE : AdtsReader.ADTS_HEADER_LEN;
+            AdtsReader.ADTS_HEADER_LEN + AdtsReader.ADTS_CRC_SIZE
+            : AdtsReader.ADTS_HEADER_LEN;
         this.currentAccessUnitSize = adtsFrameLen - this.currentAdtsHeaderLen;
 
         // buffer fullness (ignoring so far, spec not clear about what it is really yet)
