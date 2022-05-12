@@ -152,9 +152,7 @@ export class AdtsReader extends PayloadReader {
 
     private parseHeader(): void {
         const br: BitReader = new BitReader(
-            this.dataBuffer.subarray(
-                this.dataOffset,
-                this.dataOffset + AdtsReader.ADTS_HEADER_LEN));
+            this.dataBuffer.subarray(this.dataOffset, this.dataBuffer.byteLength));
 
         br.skipBits(12);
 
