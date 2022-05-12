@@ -67,6 +67,7 @@ export abstract class PayloadReader {
         this.pusiCount = 0;
         this.lastPusiFramesLen = 0;
         this.dataOffset = 0;
+        this.dataBuffer = null;
         this.firstTimestamp = -1;
         this.timeUs = -1;
     }
