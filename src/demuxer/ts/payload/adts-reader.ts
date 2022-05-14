@@ -1,4 +1,4 @@
-import { MICROSECOND_TIMESCALE } from '../../../utils/timescale';
+import { MICROSECOND_TIMESCALE, toSecondsFromMicros } from '../../../utils/timescale';
 import { BitReader } from '../../../utils/bit-reader';
 import { PayloadReader } from './payload-reader';
 import { Frame } from '../../frame';
@@ -79,7 +79,7 @@ export class AdtsReader extends PayloadReader {
                     this.parseHeader();
                 } catch (err) {
                     // data pointers will be nulled by reset call, so we need to make string first
-                    const errMsg = `Error parsing header at ${this.dataOffset} / ${this.dataBuffer.byteLength}: ${(err as Error).message}`;
+                    const errMsg = `Error parsing header at ${this.dataOffset}/${this.dataBuffer.byteLength} [B]; t=${toSecondsFromMicros(this.timeUs)} [s]; \nException: ${(err as Error).message}`;
                     // console.debug(this); // only for debug !!
                     this.reset();
                     this.state = AdtsReaderState.FIND_SYNC;
