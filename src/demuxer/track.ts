@@ -68,7 +68,7 @@ export class Track {
         return toSecondsFromMicros(this.getDuration());
     }
 
-    public getMetadata(): {} { // FIXME: Make this a string-to-any hash
-        return {};
+    public getMetadata() {
+        return {}
     }
 }
