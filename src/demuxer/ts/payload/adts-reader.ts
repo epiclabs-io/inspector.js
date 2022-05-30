@@ -1,9 +1,11 @@
-import { MICROSECOND_TIMESCALE, toSecondsFromMicros } from '../../../utils/timescale';
-import { BitReader } from '../../../utils/bit-reader';
 import { PayloadReader } from './payload-reader';
-import { Frame } from '../../frame';
 import { Track } from '../../track';
+import { Frame } from '../../frame';
 import { FRAME_TYPE } from '../../../codecs/h264/nal-units';
+
+import { BitReader } from '../../../utils/bit-reader';
+import { MICROSECOND_TIMESCALE, toSecondsFromMicros } from '../../../utils/timescale';
+import { ADTS_CRC_SIZE, ADTS_HEADER_LEN, ADTS_SAMPLE_RATES } from './adts-consts';
 
 enum AdtsReaderState {
     FIND_SYNC,
@@ -11,34 +13,18 @@ enum AdtsReaderState {
     READ_FRAME
 }
 
+export interface AdtsFrameInfo {
+    profile: number;
+    channels: number;
+    sampleRate: number;
+    headerLen: number;
+    accessUnitSize: number;
+    numFrames: number
+}
+
 export class AdtsReader extends PayloadReader {
 
-    private static ADTS_HEADER_LEN = 7 as const;
-    private static ADTS_CRC_SIZE: number = 2 as const;
-
-    // TODO: use centralized table
-    private static ADTS_SAMPLE_RATES: number[] = [
-        96000,
-        88200,
-        64000,
-        48000,
-        44100,
-        32000,
-        24000,
-        22050,
-        16000,
-        12000,
-        11025,
-        8000,
-        7350
-    ];
-
-    public profile: number = NaN;
-    public channels: number = NaN;
-    public sampleRate: number = NaN;
-    public frameDuration: number = NaN;
-    public currentAdtsHeaderLen: number = NaN;
-    public currentAccessUnitSize: number = NaN;
+    private currentFrame: AdtsFrameInfo | null = null;
 
     private state: AdtsReaderState = AdtsReaderState.FIND_SYNC;
 
@@ -71,7 +57,7 @@ export class AdtsReader extends PayloadReader {
                 break;
 
             case AdtsReaderState.READ_HEADER:
-                if (this.dataBuffer.byteLength - this.dataOffset < AdtsReader.ADTS_HEADER_LEN) {
+                if (this.dataBuffer.byteLength - this.dataOffset < ADTS_HEADER_LEN) {
                     needMoreData = true;
                     break;
                 }
@@ -88,7 +74,10 @@ export class AdtsReader extends PayloadReader {
                 break;
 
             case AdtsReaderState.READ_FRAME:
-                if (this.dataBuffer.byteLength - this.dataOffset < this.currentAdtsHeaderLen + this.currentAccessUnitSize) {
+                const { headerLen, accessUnitSize, sampleRate } = this.currentFrame;
+                const frameDurationUs = (MICROSECOND_TIMESCALE * 1024) / sampleRate;
+                if (this.dataBuffer.byteLength - this.dataOffset
+                    < headerLen + accessUnitSize) {
                     needMoreData = true;
                     break;
                 }
@@ -96,16 +85,17 @@ export class AdtsReader extends PayloadReader {
                 this.frames.push(new Frame(
                     FRAME_TYPE.NONE,
                     this.timeUs,
-                    this.currentAccessUnitSize,
-                    this.frameDuration,
-                    this.dataOffset));
+                    accessUnitSize,
+                    frameDurationUs,
+                    this.dataOffset
+                ));
 
-                const frameDataStart = this.dataOffset + this.currentAdtsHeaderLen;
-                const frameDataEnd = frameDataStart + this.currentAccessUnitSize;
+                const frameDataStart = this.dataOffset + headerLen;
+                const frameDataEnd = frameDataStart + accessUnitSize;
                 const frameData = this.dataBuffer.subarray(frameDataStart, frameDataEnd);
 
                 this.dataOffset = frameDataEnd;
-                this.timeUs = this.timeUs + this.frameDuration;
+                this.timeUs = this.timeUs + frameDurationUs;
 
                 this.state = AdtsReaderState.FIND_SYNC;
 
@@ -151,6 +141,11 @@ export class AdtsReader extends PayloadReader {
     }
 
     private parseHeader(): void {
+
+        // first, clear current frame state. in case of exception during header parse,
+        // it will keep null state, as we only set the frame after success.
+        this.currentFrame = null;
+
         const br: BitReader = new BitReader(
             this.dataBuffer.subarray(this.dataOffset, this.dataBuffer.byteLength));
 
@@ -173,14 +168,13 @@ export class AdtsReader extends PayloadReader {
         if (audioCodecProfile <= 0 || audioCodecProfile >= 5) {
             throw new Error(`Unsupported or likely invalid AAC profile (MPEG-4 Audio Object Type): ${audioCodecProfile}`);
         }
-        this.profile = audioCodecProfile;
+        const profile = audioCodecProfile;
 
         const sampleRateIndex: number = br.readBits(4);
-        if (sampleRateIndex < 0 && sampleRateIndex >= AdtsReader.ADTS_SAMPLE_RATES.length) {
+        if (sampleRateIndex < 0 && sampleRateIndex >= ADTS_SAMPLE_RATES.length) {
             throw new Error(`Invalid AAC sampling-frequency index: ${sampleRateIndex}`);
         }
-        this.sampleRate = AdtsReader.ADTS_SAMPLE_RATES[sampleRateIndex];
-        this.frameDuration = (MICROSECOND_TIMESCALE * 1024) / this.sampleRate;
+        const sampleRate = ADTS_SAMPLE_RATES[sampleRateIndex];
 
         // private bit (unused by spec)
         br.skipBits(1);
@@ -189,7 +183,7 @@ export class AdtsReader extends PayloadReader {
         if (channelsConf <= 0 || channelsConf >= 8) {
             throw new Error(`Channel configuration invalid value: ${channelsConf}`);
         }
-        this.channels = channelsConf;
+        const channels = channelsConf;
 
         // originality/home/copyright bits (ignoring)
         br.skipBits(4);
@@ -199,18 +193,16 @@ export class AdtsReader extends PayloadReader {
             throw new Error(`Invalid ADTS-frame byte-length: ${adtsFrameLen}`);
         }
 
-        this.currentAdtsHeaderLen = hasCrc ?
-            AdtsReader.ADTS_HEADER_LEN + AdtsReader.ADTS_CRC_SIZE
-            : AdtsReader.ADTS_HEADER_LEN;
-        this.currentAccessUnitSize = adtsFrameLen - this.currentAdtsHeaderLen;
+        const headerLen = hasCrc ? ADTS_HEADER_LEN + ADTS_CRC_SIZE : ADTS_HEADER_LEN;
+        const accessUnitSize = adtsFrameLen - headerLen;
 
         // buffer fullness (ignoring so far, spec not clear about what it is really yet)
         br.skipBits(11);
 
         // 1 ADTS frame can contain up to 4 AAC frames
-        const nbOfAacFrames = br.readBits(2) + 1;
-        if (nbOfAacFrames <= 0) {
-            throw new Error(`Invalid AAC frame-number in ADTS header: ${nbOfAacFrames}`);
+        const numFrames = br.readBits(2) + 1;
+        if (numFrames <= 0) {
+            throw new Error(`Invalid AAC frame-number in ADTS header: ${numFrames}`);
         }
 
         // FIXME: semantically our Frame info parsed represents potentially several AAC ones,
@@ -221,6 +213,15 @@ export class AdtsReader extends PayloadReader {
             throw new Error(`Can not have AAC frame-number in ADTS header: ${nbOfAacFrames} (only 1 is supported in this compatibility mode)`);
         }
         //*/
+
+        this.currentFrame = {
+            headerLen,
+            accessUnitSize,
+            channels,
+            profile,
+            sampleRate,
+            numFrames
+        };
 
         this.state = AdtsReaderState.READ_FRAME;
     }
