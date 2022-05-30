@@ -68,6 +68,9 @@ export class Track {
         return toSecondsFromMicros(this.getDuration());
     }
 
+    /**
+     * @deprecated
+     */
     public getMetadata() {
         return {}
     }
