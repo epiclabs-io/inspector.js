@@ -202,15 +202,15 @@ export class AdtsReader extends PayloadReader {
         // 1 ADTS frame can contain up to 4 AAC frames
         const numFrames = br.readBits(2) + 1;
         if (numFrames <= 0) {
-            throw new Error(`Invalid AAC frame-number in ADTS header: ${numFrames}`);
+            throw new Error(`Invalid number of AAC frames for ADTS header: ${numFrames}`);
         }
 
         // FIXME: semantically our Frame info parsed represents potentially several AAC ones,
         // with the same container PTS value however (precision could be inferred from
         // sampling freq however).
         /*
-        if (nbOfAacFrames !== 1) {
-            throw new Error(`Can not have AAC frame-number in ADTS header: ${nbOfAacFrames} (only 1 is supported in this compatibility mode)`);
+        if (numFrames !== 1) {
+            throw new Error(`Can not have AAC frame-number in ADTS header: ${numFrames} (only 1 is supported in this compatibility mode)`);
         }
         //*/
 
