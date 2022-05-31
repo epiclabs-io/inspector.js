@@ -24,12 +24,12 @@ export interface AdtsFrameInfo {
 
 export class AdtsReader extends PayloadReader {
 
-    private currentFrame: AdtsFrameInfo | null = null;
-
     private state: AdtsReaderState = AdtsReaderState.FIND_SYNC;
 
-    constructor () {
-        super();
+    private currentFrame: AdtsFrameInfo | null = null;
+
+    get currentFrameInfo(): AdtsFrameInfo | null {
+        return this.currentFrame;
     }
 
     public getMimeType(): string {
