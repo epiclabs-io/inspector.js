@@ -120,6 +120,6 @@ export class PESReader {
     private handlePayloadReadData(data: Uint8Array, timeUs: number, naluType: number = NaN) {
         if (!this.payloadReader.frames.length) return;
         const timeSecs = toSecondsFromMicros(timeUs);
-        this.onPayloadData(data, timeSecs, naluType);
+        this.onPayloadData(data, timeUs, naluType);
     }
 }
