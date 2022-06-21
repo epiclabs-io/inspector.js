@@ -181,7 +181,9 @@ export class AdtsReader extends PayloadReader {
 
         const channelsConf = br.readBits(3);
         if (channelsConf <= 0 || channelsConf >= 8) {
-            throw new Error(`Channel configuration invalid value: ${channelsConf}`);
+            // ignorining this for now, todo see why comes up in ffmpeg payload
+            if (channelsConf != 0)
+                throw new Error(`Channel configuration invalid value: ${channelsConf}`);
         }
         const channels = channelsConf;
 
