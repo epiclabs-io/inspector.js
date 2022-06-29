@@ -48,19 +48,16 @@ export class Mp4SampleTable {
 
             for (let i = 0; i < entry.sampleCount; i++) {
 
-                const isSyncFrame = this.syncSamples ? (this.syncSamples.syncSampleNumbers.indexOf(frameCount + 1) >= 0) : false;
+                const isSyncFrame = this.syncSamples ?
+                    (this.syncSamples.syncSampleNumbers.indexOf(frameCount + 1) >= 0) : false;
 
                 const newFrame = new Frame(
                     isSyncFrame ? FRAME_TYPE.I : FRAME_TYPE.P,
-                    toMicroseconds(dts, this._track.getTimescale()),
-                    this.sampleSizes.sampleSize || this.sampleSizes.entries[frameCount],
-                    toMicroseconds(entry.sampleDelta, this._track.getTimescale())
+                    dts,
+                    0, // PTO/CTO table is optional, zero is default obviously.
+                    entry.sampleDelta,
+                    this.sampleSizes.sampleSize || this.sampleSizes.entries[frameCount]
                 );
-
-                newFrame.scaledDuration = entry.sampleDelta;
-                newFrame.scaledDecodingTime = dts;
-                newFrame.scaledPresentationTimeOffset = 0;
-                newFrame.timescale = this._track.getTimescale();
 
                 frames.push(newFrame);
 
@@ -78,9 +75,7 @@ export class Mp4SampleTable {
                 for (let i = 0; i < entry.sampleCount; i++) {
 
                     frames[frameCount]
-                        .setPresentationTimeOffsetUs(toMicroseconds(entry.sampleCTimeOffset, this._track.getTimescale()));
-
-                    frames[frameCount].scaledPresentationTimeOffset = entry.sampleCTimeOffset;
+                        .setPresentationTimeOffset(entry.sampleCTimeOffset);
 
                     frameCount++; // note: here we incr the count after using it as an ordinal index
                 }
@@ -123,8 +118,10 @@ export class Mp4SampleTable {
 
                 const frame = frames[frameCount];
 
-                frame.bytesOffset = this.chunkOffsetBox.chunkOffsets[index];
-                frame.bytesOffset += sampleOffsetInChunk;
+                const bytesOffset = this.chunkOffsetBox.chunkOffsets[index];
+                                    + sampleOffsetInChunk;
+
+                frame.setBytesOffset(bytesOffset)
 
                 sampleOffsetInChunk += frame.size;
 

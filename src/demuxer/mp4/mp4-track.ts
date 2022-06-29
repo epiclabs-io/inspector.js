@@ -19,16 +19,16 @@ export type Mp4TrackDefaults = {
 
 export class Mp4Track extends Track {
 
+    private baseDataOffset: number = 0;
+    private baseMediaDecodeTime: number = 0;
+
+    private endDts: number = 0;
+
+    private defaults: Mp4TrackDefaults[] = [];
+    private defaultSampleFlagsParsed: (SampleFlags | null)[] = [];
     private sidx: Sidx = null;
     private trunInfo: Trun[] = [];
     private trunInfoReadIndex: number = 0;
-    private lastDtsUs: number = 0;
-    private lastDtsScaled: number = 0;
-    private timescale: number = null;
-    private defaults: Mp4TrackDefaults[] = [];
-    private defaultSampleFlagsParsed: (SampleFlags | null)[] = [];
-    private baseDataOffset: number = 0;
-    private baseMediaDecodeTime: number = 0;
 
     constructor(
         id: number,
@@ -38,17 +38,27 @@ export class Mp4Track extends Track {
         public metadataAtom: AudioAtom | VideoAtom,
         public dataOffset: number
     ) {
-
         super(id, type, mimeType);
-        // declared in base-class
-        this.durationUs = 0;
 
         if (this.dataOffset < 0) {
           throw new Error('Invalid file, no sample-data base-offset can be determined');
         }
     }
 
+    /**
+     * post: endDts ie duration incremented by frame duration
+     * @param frame
+     *
+     */
+    public appendFrame(frame: Frame) {
+        this.endDts += frame.duration;
+        this.frames.push(frame);
+    }
+
     public flush() {
+
+        this.endDts = 0;
+
         this.trunInfo.length = 0;
         this.trunInfoReadIndex = 0;
         this.defaults.length = 0;
@@ -56,7 +66,17 @@ export class Mp4Track extends Track {
         super.flush();
     }
 
-    // TODO: make this abstract on Track class
+    public getDuration() {
+        return this.frames.length ?
+            this.endDts - this.frames[0].dts : 0;
+    }
+
+    public getTimescale(): number {
+        const timescale: number = this.sidx ?
+            this.sidx.timescale : super.getTimescale();
+        return timescale;
+    }
+
     public getResolution(): [number, number] {
         if (!this.isVideo()) {
             throw new Error('Can not get resolution of non-video track');
@@ -85,22 +105,13 @@ export class Mp4Track extends Track {
         return this.metadataAtom;
     }
 
-    public getTimescale(): number {
-        return this.timescale;
-    }
-
     public setBaseMediaDecodeTime(baseDts: number) {
         this.baseMediaDecodeTime = baseDts;
-        this.lastDtsScaled = baseDts;
-        this.lastDtsUs = toMicroseconds(baseDts, this.timescale);
+        this.endDts = baseDts;
     }
 
     public getBaseMediaDecodeTime(): number {
         return this.baseMediaDecodeTime;
-    }
-
-    public setTimescale(timescale: number) {
-        this.timescale = timescale;
     }
 
     public addDefaults(defaults: Mp4TrackDefaults) {
@@ -154,19 +165,8 @@ export class Mp4Track extends Track {
 
     public setSidxAtom(atom: Atom): void {
         this.sidx = atom as Sidx;
-        this.lastDtsScaled = this.sidx.earliestPresentationTime;
-        this.lastDtsUs = toMicroseconds(this.sidx.earliestPresentationTime, this.sidx.timescale);
-        this.timescale = this.sidx.timescale;
-    }
-
-    public appendFrame(frame: Frame) {
-        if (!frame.hasUnnormalizedIntegerTiming()) {
-            throw new Error('Frame must have unscaled-int sample timing');
-        }
-        this.lastDtsScaled += frame.scaledDuration;
-        this.lastDtsUs += frame.duration;
-        this.durationUs += frame.duration;
-        this.frames.push(frame);
+        this.endDts = this.sidx.earliestPresentationTime;
+        this.setTimescale(this.sidx.timescale);
     }
 
     // TODO: move the truns array and processTrunAtoms to a own container class (like sample-table)
@@ -181,12 +181,6 @@ export class Mp4Track extends Track {
 
             if (trunIndex < this.trunInfoReadIndex) {
               return;
-            }
-
-            const timescale: number = this.sidx ? this.sidx.timescale : this.getTimescale();
-
-            if (!this.sidx) {
-                //warn('No sidx found, using parent timescale:', timescale);
             }
 
             const sampleRunDataOffset: number = trun.dataOffset + this.getFinalSampleDataOffset();
@@ -207,32 +201,29 @@ export class Mp4Track extends Track {
                     throw new Error('Invalid file, samples have no duration');
                 }
 
-                const durationUs: number = toMicroseconds(sampleDuration, timescale);
-                const ctoUs: number = toMicroseconds((sample.compositionTimeOffset || 0), timescale);
-                const dtsUs = this.lastDtsUs;
+                const duration: number = sampleDuration;
+                const dts = this.endDts;
+                const cto: number = sample.compositionTimeOffset || 0;
 
                 const frameSize = sample.size || this.defaults[trunIndex]?.sampleSize;
                 if (!frameSize) throw new Error('Frame has to have either sample-size of trun-entry or track default');
 
-                const newFrame = new Frame(
-                    flags ? (flags.isSyncFrame ? FRAME_TYPE.I : FRAME_TYPE.P) : FRAME_TYPE.NONE,
-                    dtsUs,
-                    frameSize,
-                    durationUs,
-                    bytesOffset,
-                    ctoUs
-                );
+                const frameType = flags ? (flags.isSyncFrame ? FRAME_TYPE.I : FRAME_TYPE.P) : FRAME_TYPE.NONE
 
-                newFrame.scaledDuration = sampleDuration;
-                newFrame.scaledDecodingTime = this.lastDtsScaled;
-                newFrame.scaledPresentationTimeOffset = sample.compositionTimeOffset || 0;
-                newFrame.timescale = timescale;
+                const newFrame = new Frame(
+                    frameType,
+                    dts,
+                    cto,
+                    duration,
+                    frameSize,
+                    bytesOffset
+                );
 
                 this.appendFrame(newFrame);
 
                 bytesOffset += frameSize;
             }
-        })
+        });
 
         this.trunInfoReadIndex = this.trunInfo.length;
     }
