@@ -4,8 +4,8 @@ import { Frame } from '../../frame';
 import { FRAME_TYPE } from '../../../codecs/h264/nal-units';
 
 import { BitReader } from '../../../utils/bit-reader';
-import { MICROSECOND_TIMESCALE, toSecondsFromMicros } from '../../../utils/timescale';
-import { ADTS_CRC_SIZE, ADTS_HEADER_LEN, ADTS_SAMPLE_RATES } from './adts-consts';
+import { MPEG_CLOCK_HZ } from '../../../utils/timescale';
+import { AAC_FRAME_SAMPLES_NUM, ADTS_CRC_SIZE, ADTS_HEADER_LEN, ADTS_SAMPLE_RATES } from './adts-consts';
 
 enum AdtsReaderState {
     FIND_SYNC,
@@ -36,17 +36,11 @@ export class AdtsReader extends PayloadReader {
         return Track.MIME_TYPE_AAC;
     }
 
-    public read(pts: number): void {
+    public read(dts: number, cto: number): void {
         if (!this.dataBuffer) {
-            return;
+            throw new Error('read() should not be called without priorly data appended');
         }
-        if (pts >= 0) {
-            this.timeUs = pts;
-        }
-
-        if (this.firstTimestamp === -1) {
-            this.firstTimestamp = this.timeUs;
-        }
+        this.setCurrentTime(dts, cto);
 
         let needMoreData = false;
         while (!needMoreData && this.dataOffset < this.dataBuffer.byteLength) {
@@ -65,7 +59,7 @@ export class AdtsReader extends PayloadReader {
                     this.parseHeader();
                 } catch (err) {
                     // data pointers will be nulled by reset call, so we need to make string first
-                    const errMsg = `Error parsing header at ${this.dataOffset}/${this.dataBuffer.byteLength} [B]; t=${toSecondsFromMicros(this.timeUs)} [s]; \nException: ${(err as Error).message}`;
+                    const errMsg = `Error parsing header at ${this.dataOffset}/${this.dataBuffer.byteLength} [B]; t=${JSON.stringify(this.getCurrentTime())} [s]; \nException: ${(err as Error).message}`;
                     // console.debug(this); // only for debug !!
                     this.reset();
                     this.state = AdtsReaderState.FIND_SYNC;
@@ -75,7 +69,8 @@ export class AdtsReader extends PayloadReader {
 
             case AdtsReaderState.READ_FRAME:
                 const { headerLen, accessUnitSize, sampleRate } = this.currentFrame;
-                const frameDurationUs = (MICROSECOND_TIMESCALE * 1024) / sampleRate;
+                // use MPTS timescale here too
+                const frameDuration = Math.round(AAC_FRAME_SAMPLES_NUM * MPEG_CLOCK_HZ / sampleRate)
                 if (this.dataBuffer.byteLength - this.dataOffset
                     < headerLen + accessUnitSize) {
                     needMoreData = true;
@@ -84,9 +79,10 @@ export class AdtsReader extends PayloadReader {
 
                 this.frames.push(new Frame(
                     FRAME_TYPE.NONE,
-                    this.timeUs,
+                    this.dts,
+                    this.cto,
+                    frameDuration,
                     accessUnitSize,
-                    frameDurationUs,
                     this.dataOffset
                 ));
 
@@ -95,13 +91,11 @@ export class AdtsReader extends PayloadReader {
                 const frameData = this.dataBuffer.subarray(frameDataStart, frameDataEnd);
 
                 this.dataOffset = frameDataEnd;
-                this.timeUs = this.timeUs + frameDurationUs;
 
                 this.state = AdtsReaderState.FIND_SYNC;
 
-                this.onData(frameData, this.timeUs);
+                this.onData(frameData, this.dts, this.cto);
                 break;
-
             }
         }
 

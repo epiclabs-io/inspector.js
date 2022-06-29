@@ -2,6 +2,7 @@ import ByteParserUtils from '../../../utils/byte-parser-utils';
 import { PayloadReader } from './payload-reader';
 import { Frame } from '../../frame';
 import { FRAME_TYPE } from '../../../codecs/h264/nal-units';
+import { MPEG_CLOCK_HZ } from '../../../utils/timescale';
 
 enum State {
     FIND_SYNC = 1,
@@ -52,16 +53,12 @@ export class MpegReader extends PayloadReader {
         return 'audio/' + this.mimeType;
     }
 
-    public read(pts: number): void {
+    public read(dts: number, cto: number): void {
         if (!this.dataBuffer) {
-            return;
+            throw new Error('read() should not be called without priorly data appended');
         }
-        if (pts >= 0) {
-            this.timeUs = pts;
-        }
-        if (this.firstTimestamp === -1) {
-            this.firstTimestamp = this.timeUs;
-        }
+        this.setCurrentTime(dts, cto);
+
         while (this.dataOffset < this.dataBuffer.byteLength) {
             if (this.state ===  State.FIND_SYNC) {
                 this.findHeader();
@@ -166,7 +163,8 @@ export class MpegReader extends PayloadReader {
                 this.currentFrameSize = Math.floor(this.samplesPerFrame * (this.bitrate * 1000 / 8) / this.sampleRate) + padding;
             }
         }
-        this.frameDuration = (1000000 * this.samplesPerFrame) / this.sampleRate;
+
+        this.frameDuration = (MPEG_CLOCK_HZ * this.samplesPerFrame) / this.sampleRate;
 
         return true;
     }
@@ -175,9 +173,16 @@ export class MpegReader extends PayloadReader {
         if ((this.dataBuffer.byteLength - this.dataOffset) < (MpegReader.HEADER_SIZE + this.currentFrameSize)) {
             return 0;
         }
+
+        this.frames.push(new Frame(
+            FRAME_TYPE.NONE,
+            this.dts,
+            this.cto,
+            this.frameDuration,
+            this.currentFrameSize
+        ));
+
         this.state = State.FIND_SYNC;
-        this.frames.push(new Frame(FRAME_TYPE.NONE, this.timeUs, this.currentFrameSize));
-        this.timeUs = this.timeUs + this.frameDuration;
         return MpegReader.HEADER_SIZE + this.currentFrameSize;
     }
 }

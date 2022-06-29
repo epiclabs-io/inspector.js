@@ -16,3 +16,5 @@ export const ADTS_SAMPLE_RATES: number[] = [
     8000,
     7350
 ];
+
+export const AAC_FRAME_SAMPLES_NUM = 1024;

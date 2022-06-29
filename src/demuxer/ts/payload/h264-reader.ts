@@ -9,18 +9,18 @@ const NALU_DELIM_LEN = 3;
 
 export class H264Reader extends PayloadReader {
 
+    private _pendingBytes: number = 0;
+
     public sps: Sps = null;
     public pps: boolean = false;
-
-    public pendingBytes: number = 0;
 
     public getMimeType(): string {
         return Track.MIME_TYPE_AVC;
     }
 
-    public flush(timeUs: number): void {
+    public flush(dts: number, cto: number): void {
 
-        this.read(timeUs);
+        this.read(dts, cto);
 
         // enforced process any last data after
         // a nalu-delim to be processed
@@ -40,14 +40,18 @@ export class H264Reader extends PayloadReader {
         this.pps = false;
     }
 
-    public read(timeUs: number): void {
+    public read(dts: number, cto: number): void {
+        if (!this.dataBuffer) {
+            throw new Error('read() should not be called without priorly data appended');
+        }
+        this.setCurrentTime(dts, cto);
 
         // process pending remainder data
         let firstNalUnit: number = 0;
         let nextNalUnit: number = 0;
 
-        if (this.pendingBytes > 0) {
-            nextNalUnit = this.findNextNalu(this.pendingBytes);
+        if (this._pendingBytes > 0) {
+            nextNalUnit = this.findNextNalu(this._pendingBytes);
             // if we cant find a next NALU-delim from the remainder data,
             // we can already give-up here.
             if (!Number.isFinite(nextNalUnit)) {
@@ -59,15 +63,6 @@ export class H264Reader extends PayloadReader {
             if (!Number.isFinite(firstNalUnit)) {
                 return;
             }
-        }
-
-        // post: firstNalUnit is finite number
-
-        if (this.firstTimestamp === -1) {
-            this.timeUs = this.firstTimestamp = timeUs;
-        }
-        if (timeUs !== -1) {
-            this.timeUs = timeUs;
         }
 
         // process next nal units in the buffer
@@ -86,7 +81,7 @@ export class H264Reader extends PayloadReader {
 
         // we need to make sure the next read starts off
         // ahead the last parsed NALU-delimiter.
-        this.pendingBytes = this.dataBuffer.byteLength;
+        this._pendingBytes = this.dataBuffer.byteLength;
     }
 
     private findNextNalu(offset: number = 0): number {
@@ -114,6 +109,8 @@ export class H264Reader extends PayloadReader {
 
         const naluData = this.dataBuffer.subarray(begin + NALU_DELIM_LEN, end);
 
+        // TODO: check for invalid values
+        // (can happen if buffer begin/remainder is garbage)
         const naluType = naluData[0] & 0x1F;
         switch(naluType) {
         case NAL_UNIT_TYPE.SLICE:
@@ -132,7 +129,7 @@ export class H264Reader extends PayloadReader {
             break;
         }
 
-        this.onData(naluData, this.timeUs, naluType);
+        this.onData(naluData, this.dts, naluType);
         return end;
     }
 
@@ -152,7 +149,13 @@ export class H264Reader extends PayloadReader {
     }
 
     private addFrame(frameType: FRAME_TYPE, naluData: Uint8Array): void {
-        const frame = new Frame(frameType, this.timeUs, naluData.byteLength, NaN);
+        const frame = new Frame(
+            frameType,
+            this.dts,
+            this.cto,
+            0,
+            naluData.byteLength,
+        );
         this.frames.push(frame);
     }
 
