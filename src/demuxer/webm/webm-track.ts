@@ -8,6 +8,7 @@ import { ITrackInfo } from './elements/track-info';
 import { Vint, EbmlElement } from './ebml/ebml-types';
 
 export class WebMTrack extends Track {
+
     private lastPts: number;
     private nsPerFrame: number;
     private lastTimecodeBase: number;
@@ -68,6 +69,10 @@ export class WebMTrack extends Track {
         return codecID.substr(pos + 1);
     }
 
+    public getResolution(): [number, number] {
+        throw new Error('Method not implemented.');
+    }
+
     public getFrames(): Frame[] {
         return this.frames;
     }
@@ -104,12 +109,21 @@ export class WebMTrack extends Track {
         const buffer: Uint8Array = element.data as Uint8Array;
         const timecode: number = ByteParserUtils.parseUint16(buffer, trackId.length);
         const flags: number = ByteParserUtils.parseUint(buffer, trackId.length + 2, 1);
+
         this.lastPts = 1000 * ((this.lastTimecodeBase + timecode) / (this.timecodeScale > 0 ? this.timecodeScale : 1));
 
         if (element.name === 'SimpleBlock' && flags & 0x80) {
-            this.frames.push(new Frame(FRAME_TYPE.I, this.lastPts, buffer.length));
+            this.frames.push(new Frame(
+                FRAME_TYPE.I,
+                this.lastPts, 0, 0,
+                buffer.length
+            ));
         } else {
-            this.frames.push(new Frame(FRAME_TYPE.P, this.lastPts, buffer.length));
+            this.frames.push(new Frame(
+                FRAME_TYPE.P,
+                this.lastPts, 0, 0,
+                buffer.length
+            ));
         }
     }
 }
