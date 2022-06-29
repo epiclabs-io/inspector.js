@@ -1,7 +1,8 @@
 import { Frame } from './frame';
 import { toSecondsFromMicros } from '../utils/timescale';
 
-export class Track {
+export abstract class Track {
+
     // FIXME: should be an enum type
     public static TYPE_VIDEO: string = 'video';
     public static TYPE_AUDIO: string = 'audio';
@@ -23,20 +24,12 @@ export class Track {
     public static MIME_TYPE_UNKNOWN: string = 'unknown';
 
     protected frames: Frame[] = [];
-    protected durationUs: number = NaN;
 
-    constructor(public id: number, public type: string /* fixme: make enum type */, public mimeType: string) {}
+    private _timeScale: number = NaN;
 
-    public update(): void {
-        this.frames = this.getFrames().sort((a: Frame, b: Frame): number => {
-            return a.timeUs - b.timeUs;
-        });
-        this.durationUs = this.getDuration();
-    }
-
-    public flush() {
-        this.frames.length = 0;
-    }
+    constructor(public id: number,
+        public type: string /* fixme: make enum type */,
+        public mimeType: string) {}
 
     public isVideo() {
         return this.type === Track.TYPE_VIDEO;
@@ -56,22 +49,37 @@ export class Track {
             && this.type !== Track.TYPE_VIDEO;
     }
 
+    public update(): void {
+        this.frames = this.getFrames().sort((a: Frame, b: Frame): number => {
+            return a.dts - b.dts;
+        });
+    }
+
+    public flush() {
+        this.frames.length = 0;
+    }
+
+    abstract getResolution(): [number, number];
+
     public getFrames(): Frame[] {
         return this.frames;
     }
 
-    public getDuration(): number {
-        return this.durationUs;
+    public getTimescale() {
+        return this._timeScale;
     }
 
-    public getDurationInSeconds(): number {
-        return toSecondsFromMicros(this.getDuration());
+    public setTimescale(timeScale: number) {
+        if (!Number.isSafeInteger(timeScale)) {
+            throw new Error(`Track timescale has to be safe-integer value`);
+        }
+        this._timeScale = timeScale;
     }
 
     /**
      * @deprecated
      */
-    public getMetadata() {
+     public getMetadata() {
         return {}
     }
 }

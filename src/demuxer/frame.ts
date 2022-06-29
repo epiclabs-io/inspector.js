@@ -3,59 +3,49 @@ import { toSecondsFromMicros } from "../utils/timescale";
 
 export class Frame {
 
-    // normalized micros value
-    private presentationTimeUs: number = 0;
-
-    // ideally have scaled integer values
-    public timescale: number = NaN;
-    public scaledDecodingTime: number = NaN;
-    public scaledPresentationTimeOffset: number = NaN;
-    public scaledDuration: number = NaN;
-
     constructor (
         public readonly frameType: FRAME_TYPE,
-        public readonly timeUs: number,
+        public readonly dts: number,
+        private _cto: number,
+        public readonly duration: number,
         public readonly size: number,
-        public readonly duration: number = NaN,
-        public bytesOffset: number = NaN,
-        public presentationTimeOffsetUs: number = 0
+        private _bytesOffset: number = NaN
     ) {
-
-        if (!Number.isFinite(size)) {
-            throw new Error('Frame has to have sample size');
+        if (dts < 0 || !Number.isSafeInteger(dts)) {
+            throw new Error(`Frame: DTS has to be positive safe-integer value`);
         }
-
-        this.setPresentationTimeOffsetUs(presentationTimeOffsetUs);
+        if (size < 0 || !Number.isSafeInteger(size)) {
+            throw new Error(`Frame: Size has to be positive safe-integer value`);
+        }
+        if (duration < 0 || !Number.isSafeInteger(duration)) {
+            throw new Error(`Frame: Duration has to be positive safe-integer value`);
+        }
+        this.setPresentationTimeOffset(_cto);
     }
 
-    hasUnnormalizedIntegerTiming() {
-        return Number.isFinite(this.timescale)
-            && Number.isFinite(this.scaledDecodingTime)
-            && Number.isFinite(this.scaledPresentationTimeOffset)
-            && Number.isFinite(this.scaledDuration);
+    get bytesOffset() {
+        return this._bytesOffset;
     }
 
-    getDecodingTimeUs() {
-        return this.timeUs;
+    get cto() {
+        return this._cto;
     }
 
-    getPresentationTimeUs(): number {
-        return this.presentationTimeUs;
+    /**
+     * aka "CTO"
+     * @param cto
+     */
+    setPresentationTimeOffset(cto: number) {
+        if (cto < 0 || !Number.isSafeInteger(cto)) {
+            throw new Error(`Frame: CTO has to be positive safe-integer value`);
+        }
+        this._cto = cto;
     }
 
-    setPresentationTimeOffsetUs(presentationTimeOffsetUs: number) {
-        this.presentationTimeUs = this.timeUs + presentationTimeOffsetUs;
-    }
-
-    getPresentationTimestampInSeconds(): number {
-        return toSecondsFromMicros(this.getPresentationTimeUs())
-    }
-
-    getDecodingTimestampInSeconds() {
-        return toSecondsFromMicros(this.getDecodingTimeUs());
-    }
-
-    getDurationInSeconds() {
-        return toSecondsFromMicros(this.duration);
+    setBytesOffset(bytesOffset: number) {
+        if (bytesOffset < 0 || !Number.isSafeInteger(bytesOffset)) {
+            throw new Error(`Frame: Bytes-offset has to be positive safe-integer value`);
+        }
+        this._bytesOffset = bytesOffset;
     }
 }
