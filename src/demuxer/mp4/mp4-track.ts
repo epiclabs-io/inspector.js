@@ -71,6 +71,13 @@ export class Mp4Track extends Track {
             this.endDts - this.frames[0].dts : 0;
     }
 
+    public getDurationInSeconds() {
+        if (!this.hasTimescale()) {
+            throw new Error(`Track ${this.type} ${this.id} timescale is not present (has not been set or determined on parsing) to convert track-duration in seconds value!`);
+        }
+        return this.getDuration() / this.getTimescale();
+    }
+
     public getTimescale(): number {
         const timescale: number = this.sidx ?
             this.sidx.timescale : super.getTimescale();
