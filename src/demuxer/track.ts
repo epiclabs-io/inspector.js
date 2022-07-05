@@ -65,13 +65,17 @@ export abstract class Track {
         return this.frames;
     }
 
+    public hasTimescale() {
+        return Number.isFinite(this.getTimescale());
+    }
+
     public getTimescale() {
         return this._timeScale;
     }
 
     public setTimescale(timeScale: number) {
-        if (!Number.isSafeInteger(timeScale)) {
-            throw new Error(`Track timescale has to be safe-integer value`);
+        if (timeScale <= 0 || !Number.isSafeInteger(timeScale)) {
+            throw new Error(`Track timescale has to be strictly positive safe-integer value`);
         }
         this._timeScale = timeScale;
     }
