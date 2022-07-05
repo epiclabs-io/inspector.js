@@ -70,7 +70,8 @@ export class AdtsReader extends PayloadReader {
             case AdtsReaderState.READ_FRAME:
                 const { headerLen, accessUnitSize, sampleRate } = this.currentFrame;
                 // use MPTS timescale here too
-                const frameDuration = Math.round(AAC_FRAME_SAMPLES_NUM * MPEG_CLOCK_HZ / sampleRate)
+                const frameDuration = Math.round(AAC_FRAME_SAMPLES_NUM * MPEG_CLOCK_HZ / sampleRate);
+
                 if (this.dataBuffer.byteLength - this.dataOffset
                     < headerLen + accessUnitSize) {
                     needMoreData = true;
