@@ -41,8 +41,10 @@ export class H264Reader extends PayloadReader {
     }
 
     public read(dts: number, cto: number): void {
+        // it is expected after this check a dataBuffer exists
         if (!this.dataBuffer) {
-            throw new Error('read() should not be called without priorly data appended');
+            return;
+            // throw new Error('read() should not be called without priorly data appended');
         }
         this.setCurrentTime(dts, cto);
 
