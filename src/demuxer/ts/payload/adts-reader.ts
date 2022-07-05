@@ -166,7 +166,7 @@ export class AdtsReader extends PayloadReader {
         const profile = audioCodecProfile;
 
         const sampleRateIndex: number = br.readBits(4);
-        if (sampleRateIndex < 0 && sampleRateIndex >= ADTS_SAMPLE_RATES.length) {
+        if (sampleRateIndex < 0 || sampleRateIndex >= ADTS_SAMPLE_RATES.length) {
             throw new Error(`Invalid AAC sampling-frequency index: ${sampleRateIndex}`);
         }
         const sampleRate = ADTS_SAMPLE_RATES[sampleRateIndex];
