@@ -120,6 +120,7 @@ export class MpegTSDemuxer implements IDemuxer {
         }
     }
 
+    /*
     private resetTracks(): void {
         for (let id in this.tracks) {
             if (this.tracks.hasOwnProperty(id)) {
@@ -127,6 +128,7 @@ export class MpegTSDemuxer implements IDemuxer {
             }
         }
     }
+    */
 
     private findContainerType(): void {
         if (this.containerType !== CONTAINER_TYPE.UNKNOWN) return;
