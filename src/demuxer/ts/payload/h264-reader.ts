@@ -48,7 +48,6 @@ export class H264Reader extends PayloadReader {
         }
         this.setCurrentTime(dts, cto);
 
-        // process pending remainder data
         let firstNalUnit: number = 0;
         let nextNalUnit: number = 0;
 
@@ -59,7 +58,8 @@ export class H264Reader extends PayloadReader {
             if (!Number.isFinite(nextNalUnit)) {
                 return;
             }
-            firstNalUnit = this.readNaluData(firstNalUnit, nextNalUnit);
+            this.readNaluData(firstNalUnit, nextNalUnit);
+            firstNalUnit = nextNalUnit;
         } else {
             firstNalUnit = this.findNextNalu();
             if (!Number.isFinite(firstNalUnit)) {
@@ -75,7 +75,8 @@ export class H264Reader extends PayloadReader {
                 break;
             }
 
-            firstNalUnit = this.readNaluData(firstNalUnit, nextNalUnit);
+            this.readNaluData(firstNalUnit, nextNalUnit);
+            firstNalUnit = nextNalUnit;
         }
 
         // prune data-buffer
@@ -107,7 +108,7 @@ export class H264Reader extends PayloadReader {
      * @param end offset (exclusive)
      * @returns end offset (exclusive) as input
      */
-    private readNaluData(begin: number, end: number): number {
+    private readNaluData(begin: number, end: number) {
 
         const naluData = this.dataBuffer.subarray(begin + NALU_DELIM_LEN, end);
 
@@ -115,6 +116,8 @@ export class H264Reader extends PayloadReader {
         // (can happen if buffer begin/remainder is garbage)
         const naluType = naluData[0] & 0x1F;
         switch(naluType) {
+        case NAL_UNIT_TYPE.AUD:
+            break;
         case NAL_UNIT_TYPE.SLICE:
             this.parseNonIdrPicSlice(naluData);
             break;
@@ -131,8 +134,7 @@ export class H264Reader extends PayloadReader {
             break;
         }
 
-        this.onData(naluData, this.dts, naluType);
-        return end;
+        this.onData(naluData, this.dts, this.cto, naluType);
     }
 
     private parseSps(naluData: Uint8Array): void {
