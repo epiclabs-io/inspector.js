@@ -60,7 +60,7 @@ export class AdtsReader extends PayloadReader {
                 try {
                     this.parseHeader();
                 } catch (err) {
-                    // data pointers will be nulled by reset call, so we need to make string first
+                    // data pointers will be nulled by reset call, so we need to make err string first
                     const errMsg = `Error parsing header at ${this.dataOffset}/${this.dataBuffer.byteLength} [B]; t=${JSON.stringify(this.getCurrentTime())} [s]; \nException: ${(err as Error).message}`;
 
                     this.reset();
