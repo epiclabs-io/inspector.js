@@ -42,7 +42,7 @@ export class H264Reader extends PayloadReader {
 
     public read(dts: number, cto: number): void {
         // it is expected after this check a dataBuffer exists
-        if (!this.dataBuffer) {
+        if (!(this?.dataBuffer?.byteLength)) {
             return;
             // throw new Error('read() should not be called without priorly data appended');
         }
