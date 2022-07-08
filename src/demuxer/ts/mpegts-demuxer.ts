@@ -164,7 +164,7 @@ export class MpegTSDemuxer implements IDemuxer {
                 continue;
             }
             const packet: Uint8Array = this.data.subarray(this.dataOffset + 1,
-                this.dataOffset + MpegTSDemuxer.MPEGTS_PACKET_SIZE_MINUS_ONE);
+                this.dataOffset + MpegTSDemuxer.MPEGTS_PACKET_SIZE);
             this.dataOffset += MpegTSDemuxer.MPEGTS_PACKET_SIZE;
             this.processTsPacket(packet);
         }
