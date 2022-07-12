@@ -25,12 +25,12 @@ export class H264Reader extends PayloadReader {
         // enforced process any last data after
         // a nalu-delim to be processed
         // (most likely partial NALUs).
-        const nextNalUnit: number = this.findNextNalu(0);
+        const nextNalUnit: number = this._findNextNalu(0);
         if (!Number.isFinite(nextNalUnit)) {
             return;
         }
 
-        this.readNaluData(nextNalUnit, this.dataBuffer.byteLength);
+        this._readNaluData(nextNalUnit, this.dataBuffer.byteLength);
     }
 
     public reset(): void {
@@ -52,16 +52,16 @@ export class H264Reader extends PayloadReader {
         let nextNalUnit: number = 0;
 
         if (this._pendingBytes > 0) {
-            nextNalUnit = this.findNextNalu(this._pendingBytes);
+            nextNalUnit = this._findNextNalu(this._pendingBytes);
             // if we cant find a next NALU-delim from the remainder data,
             // we can already give-up here.
             if (!Number.isFinite(nextNalUnit)) {
                 return;
             }
-            this.readNaluData(firstNalUnit, nextNalUnit);
+            this._readNaluData(firstNalUnit, nextNalUnit);
             firstNalUnit = nextNalUnit;
         } else {
-            firstNalUnit = this.findNextNalu();
+            firstNalUnit = this._findNextNalu();
             if (!Number.isFinite(firstNalUnit)) {
                 return;
             }
@@ -70,12 +70,12 @@ export class H264Reader extends PayloadReader {
         // process next nal units in the buffer
         while (true) {
             // w/o the +3 we would end up again with the input offset!
-            nextNalUnit = this.findNextNalu(firstNalUnit + NALU_DELIM_LEN);
+            nextNalUnit = this._findNextNalu(firstNalUnit + NALU_DELIM_LEN);
             if (!Number.isFinite(nextNalUnit)) {
                 break;
             }
 
-            this.readNaluData(firstNalUnit, nextNalUnit);
+            this._readNaluData(firstNalUnit, nextNalUnit);
             firstNalUnit = nextNalUnit;
         }
 
@@ -87,7 +87,7 @@ export class H264Reader extends PayloadReader {
         this._pendingBytes = this.dataBuffer.byteLength;
     }
 
-    private findNextNalu(offset: number = 0): number {
+    private _findNextNalu(offset: number = 0): number {
         if (!(this?.dataBuffer?.byteLength)) {
             return NaN;
         }
@@ -108,24 +108,26 @@ export class H264Reader extends PayloadReader {
      * @param end offset (exclusive)
      * @returns end offset (exclusive) as input
      */
-    private readNaluData(begin: number, end: number) {
+    private _readNaluData(begin: number, end: number) {
 
         const naluData = this.dataBuffer.subarray(begin + NALU_DELIM_LEN, end);
 
         // TODO: check for invalid values
-        // (can happen if buffer begin/remainder is garbage)
+        // (can happen if buffer begin/remainder is garbage,
+        // assert transport parsing is correct, but also handle packet loss)
+
         const naluType = naluData[0] & 0x1F;
         switch(naluType) {
         case NAL_UNIT_TYPE.AUD:
             break;
         case NAL_UNIT_TYPE.SLICE:
-            this.parseNonIdrPicSlice(naluData);
+            this._parseNonIdrPicSlice(naluData);
             break;
         case NAL_UNIT_TYPE.IDR:
-            this.addFrame(FRAME_TYPE.I, naluData);
+            this._addFrame(FRAME_TYPE.I, naluData);
             break;
         case NAL_UNIT_TYPE.SPS:
-            this.parseSps(naluData);
+            this._parseSps(naluData);
             break;
         case NAL_UNIT_TYPE.PPS:
             this.pps = true;
@@ -137,22 +139,22 @@ export class H264Reader extends PayloadReader {
         this.onData(naluData, this.dts, this.cto, naluType);
     }
 
-    private parseSps(naluData: Uint8Array): void {
+    private _parseSps(naluData: Uint8Array): void {
         // skip first byte NALU-header for SPS-parser func input (expects only payload)
         this.sps = H264ParameterSetParser.parseSPS(naluData.subarray(1));
     }
 
-    private parseNonIdrPicSlice(naluData: Uint8Array): void {
+    private _parseNonIdrPicSlice(naluData: Uint8Array): void {
         const sliceParser: BitReader = new BitReader(naluData);
 
         sliceParser.skipBytes(1);
         sliceParser.readUEG();
         const sliceType: SLICE_TYPE = sliceParser.readUEG();
 
-        this.addFrame(mapNaluSliceToFrameType(sliceType), naluData);
+        this._addFrame(mapNaluSliceToFrameType(sliceType), naluData);
     }
 
-    private addFrame(frameType: FRAME_TYPE, naluData: Uint8Array): void {
+    private _addFrame(frameType: FRAME_TYPE, naluData: Uint8Array): void {
         const frame = new Frame(
             frameType,
             this.dts,
