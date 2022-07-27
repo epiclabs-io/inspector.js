@@ -13,48 +13,48 @@ enum CONTAINER_TYPE {
 }
 
 export class MpegTSDemuxer implements IDemuxer {
+
     private static MPEGTS_SYNC: number = 0x47;
     private static MPEGTS_PACKET_SIZE: number = 188;
-    private static MPEGTS_PACKET_SIZE_MINUS_ONE: number = 187;
 
     public tracks: { [id: number] : TSTrack; } = {};
 
-    private containerType: CONTAINER_TYPE = CONTAINER_TYPE.UNKNOWN;
+    private _containerType: CONTAINER_TYPE = CONTAINER_TYPE.UNKNOWN;
 
-    private data: Uint8Array;
-    private dataOffset: number;
+    private _data: Uint8Array;
+    private _dataOffset: number;
 
-    private packetsCount: number = 0;
+    private _packetsCount: number = 0;
 
-    private pmtId: number = NaN;
-    private pmtParsed: boolean = false;
+    private _pmtId: number = NaN;
+    private _pmtParsed: boolean = false;
 
     get currentBufferSize(): number {
-        return this?.data.byteLength || 0;
+        return this?._data.byteLength || 0;
     }
 
     get currentPacketCount(): number {
-        return this.packetsCount;
+        return this._packetsCount;
     }
 
     get isProgramMapUpdated(): boolean {
-        return this.pmtParsed;
+        return this._pmtParsed;
     }
 
     public append(data: Uint8Array, pruneAfterParse: boolean = false): Uint8Array | null  {
-        if (!this.data || this.data.byteLength === 0) {
-            this.data = new Uint8Array(data);
-            this.dataOffset = 0;
+        if (!this._data || this._data.byteLength === 0) {
+            this._data = new Uint8Array(data);
+            this._dataOffset = 0;
         } else {
-            const newLen: number = this.data.byteLength + data.byteLength;
+            const newLen: number = this._data.byteLength + data.byteLength;
             const newBuffer: Uint8Array = new Uint8Array(newLen);
-            newBuffer.set(this.data, 0);
-            newBuffer.set(data, this.data.byteLength);
-            this.data = newBuffer;
+            newBuffer.set(this._data, 0);
+            newBuffer.set(data, this._data.byteLength);
+            this._data = newBuffer;
         }
 
-        this.parse();
-        this.updateTracks();
+        this._parse();
+        this._updateTracks();
 
         if (pruneAfterParse) {
             return this.prune();
@@ -65,21 +65,21 @@ export class MpegTSDemuxer implements IDemuxer {
     public prune(): Uint8Array | null {
         let parsedBuf: Uint8Array = null;
         // prune off parsing remainder from buffer
-        if (this.dataOffset > 0) {
+        if (this._dataOffset > 0) {
             // we might have dropped the data already
             // through a parsing callback calling end() for example.
-            if (this.data) {
+            if (this._data) {
                 // the offset is expected to go +1 the buffer range
                 // thus the > instead of >=
-                if (this.dataOffset > this.data.byteLength) {
+                if (this._dataOffset > this._data.byteLength) {
                     throw new Error('Reader offset is out of buffer range');
                 }
                 // second arg of .subarray is exclusive range
-                parsedBuf = this.data.subarray(0, this.dataOffset);
+                parsedBuf = this._data.subarray(0, this._dataOffset);
                 // the first argument yields to an empty array when out-of-range
-                this.data = this.data.subarray(this.dataOffset);
+                this._data = this._data.subarray(this._dataOffset);
             }
-            this.dataOffset = 0;
+            this._dataOffset = 0;
         }
         return parsedBuf;
     }
@@ -91,20 +91,20 @@ export class MpegTSDemuxer implements IDemuxer {
                 this.tracks[trackId].update();
             }
         }
-        this.data = null;
-        this.dataOffset = 0;
+        this._data = null;
+        this._dataOffset = 0;
     }
 
     public onProgramMapUpdate() {};
 
-    private parse(): void {
+    private _parse(): void {
 
-        this.findContainerType();
+        this._findContainerType();
 
-        if (this.containerType === CONTAINER_TYPE.MPEG_TS) {
-            this.readPackets();
+        if (this._containerType === CONTAINER_TYPE.MPEG_TS) {
+            this._readPackets();
         } else {
-            const streamReader: BitReader = new BitReader(this.data);
+            const streamReader: BitReader = new BitReader(this._data);
             this.tracks[0] = new TSTrack(0,
                 Track.TYPE_AUDIO, Track.MIME_TYPE_AAC,
                 new PESReader(0, MptsElementaryStreamType.TS_STREAM_TYPE_AAC));
@@ -112,7 +112,7 @@ export class MpegTSDemuxer implements IDemuxer {
         }
     }
 
-    private updateTracks(): void {
+    private _updateTracks(): void {
         for (const trackId in this.tracks) {
             if (this.tracks.hasOwnProperty(trackId)) {
                 this.tracks[trackId].update();
@@ -120,59 +120,50 @@ export class MpegTSDemuxer implements IDemuxer {
         }
     }
 
-    /*
-    private resetTracks(): void {
-        for (let id in this.tracks) {
-            if (this.tracks.hasOwnProperty(id)) {
-                (this.tracks[id] as TSTrack).pes.reset();
-            }
-        }
-    }
-    */
+    private _findContainerType(): void {
 
-    private findContainerType(): void {
-        if (this.containerType !== CONTAINER_TYPE.UNKNOWN) return;
+        if (this._containerType !== CONTAINER_TYPE.UNKNOWN) return;
 
-        while (this.dataOffset < this.data.byteLength) {
-            if (this.data[this.dataOffset] === MpegTSDemuxer.MPEGTS_SYNC) {
-                this.containerType = CONTAINER_TYPE.MPEG_TS;
+        while (this._dataOffset < this._data.byteLength) {
+            if (this._data[this._dataOffset] === MpegTSDemuxer.MPEGTS_SYNC) {
+                this._containerType = CONTAINER_TYPE.MPEG_TS;
                 break;
-            } else if ((this.data.byteLength - this.dataOffset) >= 4) {
-                const dataRead: number = (this.data[this.dataOffset] << 8) | (this.data[this.dataOffset + 1]);
+            } else if ((this._data.byteLength - this._dataOffset) >= 4) {
+                const dataRead: number = (this._data[this._dataOffset] << 8) | (this._data[this._dataOffset + 1]);
                 if (dataRead === 0x4944 || (dataRead & 0xfff6) === 0xfff0) {
-                    this.containerType = CONTAINER_TYPE.RAW_AAC;
+                    this._containerType = CONTAINER_TYPE.RAW_AAC;
                     break;
                 }
             }
-            this.dataOffset++;
+            this._dataOffset++;
         }
 
-        if (this.containerType === CONTAINER_TYPE.UNKNOWN) {
+        if (this._containerType === CONTAINER_TYPE.UNKNOWN) {
             throw new Error('Format not supported');
         }
     }
 
-    private readPackets(): void {
+    private _readPackets(): void {
         // run as long as there is at least a full packet in buffer
-        while ((this.data.byteLength - this.dataOffset) >= MpegTSDemuxer.MPEGTS_PACKET_SIZE) {
+        while ((this._data.byteLength - this._dataOffset) >= MpegTSDemuxer.MPEGTS_PACKET_SIZE) {
 
             // check for sync-byte
-            const currentByte: number = this.data[this.dataOffset];
+            const currentByte: number = this._data[this._dataOffset];
             if (currentByte !== MpegTSDemuxer.MPEGTS_SYNC) {
                 // keep looking if we are out of sync
-                this.dataOffset++;
+                this._dataOffset++;
                 continue;
             }
-            const packet: Uint8Array = this.data.subarray(this.dataOffset + 1,
-                this.dataOffset + MpegTSDemuxer.MPEGTS_PACKET_SIZE);
-            this.dataOffset += MpegTSDemuxer.MPEGTS_PACKET_SIZE;
-            this.processTsPacket(packet);
+            const packet: Uint8Array = this._data.subarray(this._dataOffset + 1,
+                this._dataOffset + MpegTSDemuxer.MPEGTS_PACKET_SIZE);
+            this._dataOffset += MpegTSDemuxer.MPEGTS_PACKET_SIZE;
+            this._processTsPacket(packet);
         }
     }
 
-    private processTsPacket(packet: Uint8Array): void {
+    private _processTsPacket(packet: Uint8Array): void {
 
-        this.packetsCount++;
+        this._packetsCount++;
 
         const packetReader: BitReader = new BitReader(packet);
         packetReader.skipBits(1);
@@ -190,9 +181,9 @@ export class MpegTSDemuxer implements IDemuxer {
         }
         if (adaptationField === 1 || adaptationField === 3) {
             if (pid === 0) {
-                this.parseProgramAllocationTable(payloadUnitStartIndicator, packetReader);
-            } else if (pid === this.pmtId) {
-                this.parseProgramMapTable(payloadUnitStartIndicator, packetReader);
+                this._parseProgramAllocationTable(payloadUnitStartIndicator, packetReader);
+            } else if (pid === this._pmtId) {
+                this._parseProgramMapTable(payloadUnitStartIndicator, packetReader);
             } else {
                 const track: TSTrack = this.tracks[pid];
                 // handle case where PID not found?
@@ -203,15 +194,15 @@ export class MpegTSDemuxer implements IDemuxer {
         }
     }
 
-    private parseProgramAllocationTable(payloadUnitStartIndicator: boolean, packetParser: BitReader): void {
+    private _parseProgramAllocationTable(payloadUnitStartIndicator: boolean, packetParser: BitReader): void {
         if (payloadUnitStartIndicator) {
             packetParser.skipBytes(packetParser.readByte());
         }
         packetParser.skipBits(27 + 7 * 8);
-        this.pmtId = packetParser.readBits(13);
+        this._pmtId = packetParser.readBits(13);
     }
 
-    private parseProgramMapTable(payloadUnitStartIndicator: boolean, packetParser: BitReader): void {
+    private _parseProgramMapTable(payloadUnitStartIndicator: boolean, packetParser: BitReader): void {
         if (payloadUnitStartIndicator) {
             packetParser.skipBytes(packetParser.readByte());
         }
@@ -256,7 +247,7 @@ export class MpegTSDemuxer implements IDemuxer {
                 this.tracks[elementaryPid] = new TSTrack(elementaryPid, type, mimeType, pes);
             }
         }
-        this.pmtParsed = true;
+        this._pmtParsed = true;
         this.onProgramMapUpdate();
     }
 }
