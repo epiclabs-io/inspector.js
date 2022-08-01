@@ -28,6 +28,8 @@ export class AdtsReader extends PayloadReader {
 
     private currentFrame: AdtsFrameInfo | null = null;
 
+    private dtsOffset: number = 0;
+
     get currentFrameInfo(): AdtsFrameInfo | null {
         return this.currentFrame;
     }
@@ -42,6 +44,11 @@ export class AdtsReader extends PayloadReader {
             return;
             //throw new Error('read() should not be called without priorly data appended');
         }
+
+        if (this.dts !== dts) {
+            this.dtsOffset = 0;
+        }
+
         this.setCurrentTime(dts, cto);
 
         let needMoreData = false;
@@ -71,7 +78,7 @@ export class AdtsReader extends PayloadReader {
 
             case AdtsReaderState.READ_FRAME:
                 const { headerLen, accessUnitSize, sampleRate } = this.currentFrame;
-                // use MPTS timescale here too
+
                 const frameDuration = Math.round(AAC_FRAME_SAMPLES_NUM * MPEG_CLOCK_HZ / sampleRate);
 
                 if (this.dataBuffer.byteLength - this.dataOffset
@@ -80,14 +87,18 @@ export class AdtsReader extends PayloadReader {
                     break;
                 }
 
+                const frameDts = this.dts + this.dtsOffset;
+
                 this.frames.push(new Frame(
                     FRAME_TYPE.NONE,
-                    this.dts,
+                    frameDts,
                     this.cto,
                     frameDuration,
                     accessUnitSize,
                     this.dataOffset
                 ));
+
+                this.dtsOffset += frameDuration;
 
                 const frameDataStart = this.dataOffset + headerLen;
                 const frameDataEnd = frameDataStart + accessUnitSize;
@@ -97,7 +108,7 @@ export class AdtsReader extends PayloadReader {
 
                 this.state = AdtsReaderState.FIND_SYNC;
 
-                this.onData(frameData, this.dts, this.cto);
+                this.onData(frameData, frameDts, this.cto);
                 break;
             }
         }
