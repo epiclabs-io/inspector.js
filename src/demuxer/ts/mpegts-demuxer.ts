@@ -30,7 +30,7 @@ export class MpegTSDemuxer implements IDemuxer {
     private _pmtParsed: boolean = false;
 
     get currentBufferSize(): number {
-        return this?._data.byteLength || 0;
+        return this._data?.byteLength || 0;
     }
 
     get currentPacketCount(): number {
@@ -172,13 +172,22 @@ export class MpegTSDemuxer implements IDemuxer {
         packetReader.skipBits(1);
 
         const pid: number = packetReader.readBits(13);
-        const adaptationField: number = (packetReader.readByte() & 0x30) >> 4;
+
+        // use unsigned right shift?
+        const adaptationField: number = (packetReader.readByte() & 0x30) >>> 4;
+
+        // todo: read continuity counter
+
+        // Adaptation field present
         if (adaptationField > 1) {
+            // adaptation field len
             const length: number = packetReader.readByte();
             if (length > 0) {
                 packetReader.skipBytes(length);
             }
         }
+
+        // Payload data present
         if (adaptationField === 1 || adaptationField === 3) {
             if (pid === 0) {
                 this._parseProgramAllocationTable(payloadUnitStartIndicator, packetReader);
