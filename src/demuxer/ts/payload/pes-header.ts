@@ -2,10 +2,46 @@ import { BitReader } from "../../../utils/bit-reader";
 
 /**
  *
- * @param packet
+ * @param {BitReader} packet PES packet-reader aligned to start of optional header section.
  * @returns [dts, pts]
  */
-export function parsePesHeader(packet: BitReader): [number, number] {
+export function parsePesHeaderOptionalFields(packet: BitReader): [number, number] {
+
+    /*
+    Marker bits 	2 	10 binary or 0x2 hex
+    Scrambling control 	2 	00 implies not scrambled
+    Priority 	1
+    Data alignment indicator 	1 	1 indicates that the PES packet header is immediately followed by the video start code or audio syncword
+    Copyright 	1 	1 implies copyrighted
+    Original or Copy 	1 	1 implies original
+    */
+    packet.skipBytes(1); // todo: parse the data-alignment idc
+
+    /*
+    PTS DTS indicator 	2 	11 = both present, 01 is forbidden, 10 = only PTS, 00 = no PTS or DTS
+    ESCR flag 	1
+    ES rate flag 	1
+    DSM trick mode flag 	1
+    Additional copy info flag 	1
+    CRC flag 	1
+    extension flag 	1
+    */
+    const ptsDtsFlags = packet.readByte();
+
+    // PES header length 	8 	gives the length of the remainder of the PES header in bytes
+    let headerRemainderLen = packet.readByte();
+
+    // The extension header size has variable length based on the present flags.
+    // We need to keep track how many bytes we will effectively read,
+    // as this will vary, in order to skip the remaining non-read bytes in an easy way,
+    // without having to treat all the possible flags and field lengths cases.
+    let packetBytesRemaining = packet.remainingBytes();
+
+    /*
+    Optional fields 	variable length 	presence is determined by flag bits above
+    Stuffing Bytes 	variable length 	0xff
+    */
+
     /**
      * Thanks to Videojs/Muxjs for this bit, which does well the
      * trick around 32-bit unary bit-ops and 33 bit numbers :)
@@ -19,23 +55,8 @@ export function parsePesHeader(packet: BitReader): [number, number] {
     // most significant bits and then multiply by 4 (equal to a left-shift
     // of 2) before we add the final 2 least significant bits of the
     // timestamp (equal to an OR.)
-
-    packet.skipBytes(1); // todo: parse the data-alignment idc
-
-    const ptsDtsFlags = packet.readByte();
-
-    // number of bytes following this bytes until payload data section
-    let headerRemainderLen = packet.readByte();
-
-    // The extension header size has variable length based on the present flags.
-    // We need to keep track how many bytes we will effectively read,
-    // as this will vary, in order to skip the remaining non-read bytes in an easy way,
-    // without having to treat all the possible flags and field lengths cases.
-    let packetBytesRemaining = packet.remainingBytes();
-
     let pts = NaN;
     let dts = NaN;
-
     if (ptsDtsFlags & 0xC0) {
         // the PTS and DTS are not written out directly. For information
         // on how they are encoded, see
