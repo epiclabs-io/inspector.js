@@ -6,7 +6,7 @@ import { AdtsReader } from './payload/adts-reader';
 import { H264Reader } from './payload/h264-reader';
 import { ID3Reader } from './payload/id3-reader';
 import { MpegReader } from './payload/mpeg-reader';
-import { parsePesHeaderTimestamps } from './payload/pes-header';
+import { parsePesHeader } from './payload/pes-header';
 
 export enum MptsElementaryStreamType {
     TS_STREAM_TYPE_AAC = 0x0F,
@@ -71,17 +71,13 @@ export class PESReader {
         if (!readStartCode) {
             throw new Error(`No start-code found parsing PES header`);
         }
-
         const streamId = packet.readByte();
-
         const pesPacketLen = ((packet.readByte() << 8) | packet.readByte());
 
-        const [dts, pts, remainderLen] = parsePesHeaderTimestamps(packet);
+        const [dts, pts] = parsePesHeader(packet);
 
         this.currentDts = dts;
         this.currentCto = pts - dts;
-
-        packet.skipBytes(remainderLen);
     }
 
     private handlePayloadReadData(data: Uint8Array, dts: number, cto: number, naluType: number = NaN) {

@@ -1,6 +1,11 @@
 import { BitReader } from "../../../utils/bit-reader";
 
-export function parsePesHeaderTimestamps(packet: BitReader): [number, number, number] {
+/**
+ *
+ * @param packet
+ * @returns [dts, pts]
+ */
+export function parsePesHeader(packet: BitReader): [number, number] {
     /**
      * Thanks to Videojs/Muxjs for this bit, which does well the
      * trick around 32-bit unary bit-ops and 33 bit numbers :)
@@ -19,12 +24,17 @@ export function parsePesHeaderTimestamps(packet: BitReader): [number, number, nu
 
     const ptsDtsFlags = packet.readByte();
 
-    const pesHeaderRemainderLen = packet.readByte();
+    // number of bytes following this bytes until payload data section
+    let headerRemainderLen = packet.readByte();
+
+    // The extension header size has variable length based on the present flags.
+    // We need to keep track how many bytes we will effectively read,
+    // as this will vary, in order to skip the remaining non-read bytes in an easy way,
+    // without having to treat all the possible flags and field lengths cases.
+    let packetBytesRemaining = packet.remainingBytes();
 
     let pts = NaN;
     let dts = NaN;
-
-    let packetRemainder = packet.remainingBytes();
 
     if (ptsDtsFlags & 0xC0) {
         // the PTS and DTS are not written out directly. For information
@@ -50,7 +60,12 @@ export function parsePesHeaderTimestamps(packet: BitReader): [number, number, nu
         }
     }
 
-    let bytesRead = packetRemainder - packet.remainingBytes()
+    // count the bytes read since the timing section start
+    packetBytesRemaining -= packet.remainingBytes();
+    // subtract the read bytes from the header len read before
+    headerRemainderLen -= packetBytesRemaining;
+    // skip the bytes to point packet to data section
+    packet.skipBytes(headerRemainderLen);
 
-    return [dts, pts, pesHeaderRemainderLen - bytesRead];
+    return [dts, pts];
 }
