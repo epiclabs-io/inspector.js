@@ -6,7 +6,7 @@ import { AdtsReader } from './payload/adts-reader';
 import { H264Reader } from './payload/h264-reader';
 import { ID3Reader } from './payload/id3-reader';
 import { MpegReader } from './payload/mpeg-reader';
-import { parsePesHeader } from './payload/pes-header';
+import { parsePesHeaderOptionalFields } from './payload/pes-header';
 
 export enum MptsElementaryStreamType {
     TS_STREAM_TYPE_AAC = 0x0F,
@@ -40,21 +40,11 @@ export class PESReader {
             this.payloadReader = new UnknownReader();
         }
 
-        this.payloadReader.onData = this.handlePayloadReadData.bind(this);
+        this.payloadReader.onData = this._handlePayloadReadData.bind(this);
     }
 
     public getStreamTypeName(): string {
         return MptsElementaryStreamType[this.type];
-    }
-
-    public onPayloadData(data: Uint8Array, dts: number, cto: number, naluType: number) {}
-
-    public appendData(payloadUnitStartIndicator: boolean, packet: BitReader): void {
-        if (payloadUnitStartIndicator) {
-            this.readHeader(packet);
-        }
-        this.payloadReader.append(packet, payloadUnitStartIndicator);
-        this.payloadReader.read(this.currentDts, this.currentCto);
     }
 
     public reset(): void {
@@ -65,7 +55,32 @@ export class PESReader {
         this.payloadReader.flush(this.currentDts, this.currentCto);
     }
 
-    private readHeader(packet: BitReader): void {
+    /**
+     * Can be overriden instance-wise in userland as in "cheap and fast" event-target.
+     */
+    public onPayloadData(data: Uint8Array, dts: number, cto: number, naluType: number) {}
+
+    /**
+     * Expects a TS packet-reader aligned on its respective payload section.
+     */
+    public appendPacket(payloadUnitStartIndicator: boolean, packet: BitReader): void {
+        // a packet with PUSI flag starts with a PES header.
+        // reading it will update our internal DTS/CTO timing state to the current
+        // payload unit ie frame(s) contained within.
+        if (payloadUnitStartIndicator) {
+            // Q: call read before (if data buffer is filled)
+            // to take out timing alignment concern from payloadReader ?
+
+            // post: dts/cto updated, packet-reader aligned to payload data section
+            this._readHeader(packet);
+        }
+        // append to payload buffer (super-class generic method)
+        this.payloadReader.append(packet, payloadUnitStartIndicator);
+        // call the reader impl
+        this.payloadReader.read(this.currentDts, this.currentCto);
+    }
+
+    private _readHeader(packet: BitReader): void {
 
         const readStartCode = packet.readBits(24) === 1;
         if (!readStartCode) {
@@ -74,13 +89,15 @@ export class PESReader {
         const streamId = packet.readByte();
         const pesPacketLen = ((packet.readByte() << 8) | packet.readByte());
 
-        const [dts, pts] = parsePesHeader(packet);
+        // parses the optional header section.
+        // reads the packet up to the data section in every case.
+        const [dts, pts] = parsePesHeaderOptionalFields(packet);
 
         this.currentDts = dts;
         this.currentCto = pts - dts;
     }
 
-    private handlePayloadReadData(data: Uint8Array, dts: number, cto: number, naluType: number = NaN) {
+    private _handlePayloadReadData(data: Uint8Array, dts: number, cto: number, naluType: number = NaN) {
         if (!this.payloadReader.frames.length) return;
 
         this.onPayloadData(data, dts, cto, naluType);

@@ -108,7 +108,7 @@ export class MpegTSDemuxer implements IDemuxer {
             this.tracks[0] = new TSTrack(0,
                 Track.TYPE_AUDIO, Track.MIME_TYPE_AAC,
                 new PESReader(0, MptsElementaryStreamType.TS_STREAM_TYPE_AAC));
-            this.tracks[0].pes.appendData(false, streamReader);
+            this.tracks[0].pes.appendPacket(false, streamReader);
         }
     }
 
@@ -197,7 +197,7 @@ export class MpegTSDemuxer implements IDemuxer {
                 const track: TSTrack = this.tracks[pid];
                 // handle case where PID not found?
                 if (track && track.pes) {
-                    track.pes.appendData(payloadUnitStartIndicator, packetReader);
+                    track.pes.appendPacket(payloadUnitStartIndicator, packetReader);
                 }
             }
         }
