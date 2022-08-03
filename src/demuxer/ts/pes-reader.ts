@@ -43,14 +43,18 @@ export class PESReader {
         this.payloadReader.onData = this.handlePayloadReadData.bind(this);
     }
 
+    public getStreamTypeName(): string {
+        return MptsElementaryStreamType[this.type];
+    }
+
     public onPayloadData(data: Uint8Array, dts: number, cto: number, naluType: number) {}
 
     public appendData(payloadUnitStartIndicator: boolean, packet: BitReader): void {
         if (payloadUnitStartIndicator) {
-            this.payloadReader.read(this.currentDts, this.currentCto);
             this.readHeader(packet);
         }
         this.payloadReader.append(packet, payloadUnitStartIndicator);
+        this.payloadReader.read(this.currentDts, this.currentCto);
     }
 
     public reset(): void {
@@ -62,14 +66,22 @@ export class PESReader {
     }
 
     private readHeader(packet: BitReader): void {
-        packet.skipBytes(7);
 
-        const [dts, pts] = parsePesHeaderTimestamps(packet);
+        const readStartCode = packet.readBits(24) === 1;
+        if (!readStartCode) {
+            throw new Error(`No start-code found parsing PES header`);
+        }
 
-        // TODO: assert CTO >= 0  ?
+        const streamId = packet.readByte();
+
+        const pesPacketLen = ((packet.readByte() << 8) | packet.readByte());
+
+        const [dts, pts, remainderLen] = parsePesHeaderTimestamps(packet);
 
         this.currentDts = dts;
         this.currentCto = pts - dts;
+
+        packet.skipBytes(remainderLen);
     }
 
     private handlePayloadReadData(data: Uint8Array, dts: number, cto: number, naluType: number = NaN) {
