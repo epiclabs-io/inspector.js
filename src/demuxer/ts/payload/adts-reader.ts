@@ -183,11 +183,9 @@ export class AdtsReader extends PayloadReader {
         br.skipBits(12);
 
         const mpegVersion: number = br.readBool() ? 1 : 0; // MPEG Version: 0 for MPEG-4, 1 for MPEG-2
-        /*
         if (mpegVersion !== 0) {
             throw new Error(`Expected in header-data MPEG-version flag = 0 (only MP4-audio supported), but signals MPEG-2!`);
         }
-        */
 
         br.skipBits(2);
 
@@ -207,6 +205,10 @@ export class AdtsReader extends PayloadReader {
         }
 
         const sampleRateIndex: number = br.readBits(4);
+        if (sampleRateIndex < 0 || sampleRateIndex >= ADTS_SAMPLE_RATES.length) {
+            throw new Error(`Invalid AAC sampling-frequency index: ${sampleRateIndex}`);
+        }
+        const sampleRate = ADTS_SAMPLE_RATES[sampleRateIndex];
 
         // private bit (unused by spec)
         br.skipBits(1);
@@ -233,11 +235,6 @@ export class AdtsReader extends PayloadReader {
 
         // Buffer fullness, states the bit-reservoir per frame.
         br.skipBits(11);
-
-        if (sampleRateIndex < 0 || sampleRateIndex >= ADTS_SAMPLE_RATES.length) {
-            throw new Error(`Invalid AAC sampling-frequency index: ${sampleRateIndex}`);
-        }
-        const sampleRate = ADTS_SAMPLE_RATES[sampleRateIndex];
 
         // Number of AAC frames (RDBs (Raw Data Blocks)) in ADTS frame minus 1.
         // 1 ADTS frame can contain up to 4 AAC frames
