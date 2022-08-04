@@ -2,7 +2,7 @@ import ByteParserUtils from '../../utils/byte-parser-utils';
 
 import { IDemuxer, TracksHash } from '../demuxer';
 
-import { Track } from '../track';
+import { Track, TrackType } from '../track';
 import { Mp4Track } from './mp4-track';
 import { Mp4SampleTable } from './mp4-sample-table';
 
@@ -184,16 +184,16 @@ export class Mp4Demuxer implements IDemuxer {
             // AVC/HEVC -> H264/5
             case Atom.hvcC:
                 this.lastCodecDataAtom = atom as Hev1;
-                this._attemptCreateTrack(Track.TYPE_VIDEO, Track.MIME_TYPE_HEVC, atom);
+                this._attemptCreateTrack(TrackType.VIDEO, Track.MIME_TYPE_HEVC, atom);
                 break;
 
             case Atom.avcC:
                 this.lastCodecDataAtom = atom as AvcC;
-                this._attemptCreateTrack(Track.TYPE_VIDEO, Track.MIME_TYPE_AVC, atom);
+                this._attemptCreateTrack(TrackType.VIDEO, Track.MIME_TYPE_AVC, atom);
                 break;
 
             case Atom.esds:
-                this._attemptCreateTrack(Track.TYPE_AUDIO, Track.MIME_TYPE_AAC, atom);
+                this._attemptCreateTrack(TrackType.AUDIO, Track.MIME_TYPE_AAC, atom);
                 this.lastCodecDataAtom = atom as Esds;
                 break;
 
@@ -283,9 +283,9 @@ export class Mp4Demuxer implements IDemuxer {
         if (this.lastSampleTable) {
             return;
         }
-        if (!this._getLastTrackCreated() || this._getLastTrackCreated().isOther()) {
+        if (!this._getLastTrackCreated() || !this._getLastTrackCreated().isAv()) {
             this._attemptCreateUnknownTrack();
-            warn('not unpacking sample table for unknown track');
+            warn('not unpacking sample table for non-AV track');
         } else { // we only create a sample table representation for known track types
             this.lastSampleTable = new Mp4SampleTable(this._getLastTrackCreated());
         }
@@ -300,7 +300,7 @@ export class Mp4Demuxer implements IDemuxer {
         }
     }
 
-    private _attemptCreateTrack(type: string, mime: string, ref: Atom) {
+    private _attemptCreateTrack(type: TrackType, mime: string, ref: Atom) {
         if (!this.lastTrackId) {
             throw new Error('No track-id set');
         }
@@ -339,7 +339,7 @@ export class Mp4Demuxer implements IDemuxer {
             }
             this.tracks[this.lastTrackId] = new Mp4Track(
                 this.lastTrackId,
-                Track.TYPE_UNKNOWN,
+                TrackType.UNKNOWN,
                 Track.MIME_TYPE_UNKNOWN,
                 null,
                 null,

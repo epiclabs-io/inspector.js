@@ -1,7 +1,6 @@
-import { toMicroseconds } from '../../utils/timescale';
 import { FRAME_TYPE } from '../../codecs/h264/nal-units';
 
-import { Track } from '../track';
+import { Track, TrackType } from '../track';
 import { Frame } from '../frame';
 
 import { Atom } from './atoms/atom';
@@ -32,7 +31,7 @@ export class Mp4Track extends Track {
 
     constructor(
         id: number,
-        type: string,
+        type: TrackType,
         mimeType: string,
         public referenceAtoms: Atom[],
         public metadataAtom: AudioAtom | VideoAtom,
@@ -85,7 +84,7 @@ export class Mp4Track extends Track {
     }
 
     public getResolution(): [number, number] {
-        if (!this.isVideo()) {
+        if (this.type !== TrackType.VIDEO) {
             throw new Error('Can not get resolution of non-video track');
         }
         const avc1 = this.metadataAtom as Avc1;

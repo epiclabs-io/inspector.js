@@ -1,10 +1,10 @@
-import { Track } from '../track';
+import { Track, TrackType } from '../track';
 import { Frame } from '../frame';
 import { PESReader } from './pes-reader';
 
 export class TSTrack extends Track {
 
-    constructor(id: number, type: string, mimeType: string,
+    constructor(id: number, type: TrackType, mimeType: string,
         public pes: PESReader) {
 
         super(id, type, mimeType);

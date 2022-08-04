@@ -1,19 +1,19 @@
 import { Frame } from './frame';
-import { toSecondsFromMicros } from '../utils/timescale';
+
+export enum TrackType {
+    VIDEO,
+    AUDIO,
+    TEXT,
+    COMPLEX,
+    LOGO,
+    BUTTONS,
+    CONTROL,
+    METADATA,
+    UNKNOWN
+}
 
 export abstract class Track {
 
-    // FIXME: should be an enum type
-    public static TYPE_VIDEO: string = 'video';
-    public static TYPE_AUDIO: string = 'audio';
-    public static TYPE_TEXT: string = 'text';
-    public static TYPE_COMPLEX: string = 'complex';
-    public static TYPE_LOGO: string = 'logo';
-    public static TYPE_BUTTONS: string = 'buttons';
-    public static TYPE_CONTROL: string = 'control';
-    public static TYPE_UNKNOWN: string = 'unknown';
-
-    // Here we don't need an enum
     public static MIME_TYPE_AAC: string = 'audio/mp4a-latm';
     public static MIME_TYPE_AVC: string = 'video/avc';
     public static MIME_TYPE_HEVC: string = 'video/hevc';
@@ -28,25 +28,11 @@ export abstract class Track {
     private _timeScale: number = NaN;
 
     constructor(public id: number,
-        public type: string /* fixme: make enum type */,
+        public type: TrackType,
         public mimeType: string) {}
 
-    public isVideo() {
-        return this.type === Track.TYPE_VIDEO;
-    }
-
-    public isAudio() {
-        return this.type === Track.TYPE_AUDIO;
-    }
-
-    public isText() {
-        return this.type === Track.TYPE_TEXT;
-    }
-
-    public isOther() {
-        return this.type !== Track.TYPE_TEXT
-            && this.type !== Track.TYPE_AUDIO
-            && this.type !== Track.TYPE_VIDEO;
+    public isAv() {
+        return this.type === TrackType.AUDIO || this.type === TrackType.VIDEO;
     }
 
     public update(): void {
@@ -58,8 +44,6 @@ export abstract class Track {
     public flush() {
         this.frames.length = 0;
     }
-
-    abstract getResolution(): [number, number];
 
     public getFrames(): Frame[] {
         return this.frames;
@@ -86,4 +70,6 @@ export abstract class Track {
      public getMetadata() {
         return {}
     }
+
+    public abstract getResolution(): [number, number];
 }

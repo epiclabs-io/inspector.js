@@ -1,5 +1,5 @@
 import { IDemuxer } from '../demuxer';
-import { Track } from '../track';
+import { Track, TrackType } from '../track';
 
 import { MptsElementaryStreamType, PESReader } from './pes-reader';
 import { TSTrack } from './ts-track';
@@ -106,7 +106,7 @@ export class MpegTSDemuxer implements IDemuxer {
         } else {
             const streamReader: BitReader = new BitReader(this._data);
             this.tracks[0] = new TSTrack(0,
-                Track.TYPE_AUDIO, Track.MIME_TYPE_AAC,
+                TrackType.AUDIO, Track.MIME_TYPE_AAC,
                 new PESReader(0, MptsElementaryStreamType.TS_STREAM_TYPE_AAC));
             this.tracks[0].pes.appendPacket(false, streamReader);
         }
@@ -233,24 +233,26 @@ export class MpegTSDemuxer implements IDemuxer {
             bytesRemaining -= infoLength + 5;
             if (!this.tracks[elementaryPid]) {
                 const pes: PESReader = new PESReader(elementaryPid, streamType);
-                let type: string;
+                let type: TrackType;
                 let mimeType: string;
                 if (streamType === MptsElementaryStreamType.TS_STREAM_TYPE_AAC) {
-                    type = Track.TYPE_AUDIO;
+                    type = TrackType.AUDIO;
                     mimeType = Track.MIME_TYPE_AAC;
                 } else if (streamType === MptsElementaryStreamType.TS_STREAM_TYPE_H264) {
-                    type = Track.TYPE_VIDEO;
+                    type = TrackType.VIDEO;
                     mimeType = Track.MIME_TYPE_AVC;
                 } else if (streamType === MptsElementaryStreamType.TS_STREAM_TYPE_ID3) {
-                    type = Track.TYPE_TEXT;
+                    type = TrackType.TEXT;
                     mimeType = Track.MIME_TYPE_ID3;
                 } else if (streamType === MptsElementaryStreamType.TS_STREAM_TYPE_MPA || streamType === MptsElementaryStreamType.TS_STREAM_TYPE_MPA_LSF) {
-                    type = Track.TYPE_AUDIO;
+                    type = TrackType.AUDIO;
                     mimeType = Track.MIME_TYPE_MPEG;
                 } else if (streamType === MptsElementaryStreamType.TS_STREAM_TYPE_METADATA) {
-                    // do nothing
+
+                    // todo: add support reading custom metadata
+                    type = TrackType.METADATA;
                 } else {
-                    type = Track.TYPE_UNKNOWN;
+                    type = TrackType.UNKNOWN;
                     mimeType = Track.MIME_TYPE_UNKNOWN;
                 }
                 this.tracks[elementaryPid] = new TSTrack(elementaryPid, type, mimeType, pes);
