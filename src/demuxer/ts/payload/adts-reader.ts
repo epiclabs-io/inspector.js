@@ -194,7 +194,7 @@ export class AdtsReader extends PayloadReader {
 
         // start further read at current second-last
         // attention: this assignment assumes nextDataOffset was computed
-        // via a non-zero byteLength of read buffer!
+        // via a non-zero byteLength of read buffer, which we assert at top.
         this.dataOffset = nextDataOffset;
         return false;
     }
