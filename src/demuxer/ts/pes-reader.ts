@@ -14,7 +14,8 @@ export enum MptsElementaryStreamType {
     TS_STREAM_TYPE_ID3 = 0x15,
     TS_STREAM_TYPE_MPA = 0x03,
     TS_STREAM_TYPE_MPA_LSF = 0x04,
-    TS_STREAM_TYPE_METADATA = 0x06
+    TS_STREAM_TYPE_METADATA = 0x15,
+    TS_STREAM_TYPE_PACKETIZED_DATA = 0x06
 }
 
 export class PESReader {
@@ -26,18 +27,26 @@ export class PESReader {
 
     constructor(public pid: number, public type: MptsElementaryStreamType) {
 
-        if (type === MptsElementaryStreamType.TS_STREAM_TYPE_AAC) {
+        switch(type) {
+        case MptsElementaryStreamType.TS_STREAM_TYPE_AAC:
             this.payloadReader = new AdtsReader();
-        } else if (type === MptsElementaryStreamType.TS_STREAM_TYPE_H264) {
+            break;
+        case MptsElementaryStreamType.TS_STREAM_TYPE_H264:
             this.payloadReader = new H264Reader();
-        } else if (type === MptsElementaryStreamType.TS_STREAM_TYPE_ID3) {
+            break;
+        case MptsElementaryStreamType.TS_STREAM_TYPE_ID3:
             this.payloadReader = new ID3Reader();
-        } else if (type === MptsElementaryStreamType.TS_STREAM_TYPE_MPA || type === MptsElementaryStreamType.TS_STREAM_TYPE_MPA_LSF) {
+            break;
+        case MptsElementaryStreamType.TS_STREAM_TYPE_MPA:
+        case MptsElementaryStreamType.TS_STREAM_TYPE_MPA_LSF:
             this.payloadReader = new MpegReader();
-        } else if (type === MptsElementaryStreamType.TS_STREAM_TYPE_METADATA) {
+            break;
+        case MptsElementaryStreamType.TS_STREAM_TYPE_METADATA:
+        case MptsElementaryStreamType.TS_STREAM_TYPE_PACKETIZED_DATA:
+            break;
+        default:
             this.payloadReader = new UnknownReader();
-        } else {
-            this.payloadReader = new UnknownReader();
+            break;
         }
 
         this.payloadReader.onData = this._handlePayloadReadData.bind(this);
