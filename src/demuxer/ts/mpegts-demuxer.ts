@@ -5,8 +5,8 @@ import { MptsElementaryStreamType, PESReader } from './pes-reader';
 import { TSTrack } from './ts-track';
 import { BitReader } from '../../utils/bit-reader';
 
-enum CONTAINER_TYPE {
-    UNKNOWN = 1,
+enum MpegContainerType {
+    UNKNOWN,
     MPEG_TS,
     RAW_AAC,
     RAW_MPEG_AUDIO
@@ -19,7 +19,7 @@ export class MpegTSDemuxer implements IDemuxer {
 
     public tracks: { [id: number] : TSTrack; } = {};
 
-    private _containerType: CONTAINER_TYPE = CONTAINER_TYPE.UNKNOWN;
+    private _containerType: MpegContainerType = MpegContainerType.UNKNOWN;
 
     private _data: Uint8Array;
     private _dataOffset: number;
@@ -54,7 +54,6 @@ export class MpegTSDemuxer implements IDemuxer {
         }
 
         this._parse();
-        this._updateTracks();
 
         if (pruneAfterParse) {
             return this.prune();
@@ -85,12 +84,6 @@ export class MpegTSDemuxer implements IDemuxer {
     }
 
     public end(): void {
-        for (const trackId in this.tracks) {
-            if (this.tracks.hasOwnProperty(trackId)) {
-                (this.tracks[trackId] as TSTrack).pes.flush();
-                this.tracks[trackId].update();
-            }
-        }
         this._data = null;
         this._dataOffset = 0;
     }
@@ -101,49 +94,58 @@ export class MpegTSDemuxer implements IDemuxer {
 
         this._findContainerType();
 
-        if (this._containerType === CONTAINER_TYPE.MPEG_TS) {
-            this._readPackets();
+        if (this._containerType === MpegContainerType.MPEG_TS) {
+            this._parseTsPackets();
         } else {
-            const streamReader: BitReader = new BitReader(this._data);
-            this.tracks[0] = new TSTrack(0,
-                TrackType.AUDIO, Track.MIME_TYPE_AAC,
-                new PESReader(0, MptsElementaryStreamType.TS_STREAM_TYPE_AAC));
-            this.tracks[0].pes.appendPacket(false, streamReader);
+            this._parseRawEsPackets();
         }
     }
 
-    private _updateTracks(): void {
-        for (const trackId in this.tracks) {
-            if (this.tracks.hasOwnProperty(trackId)) {
-                this.tracks[trackId].update();
-            }
-        }
+    private _parseRawEsPackets() {
+        const streamReader: BitReader = new BitReader(this._data);
+        this.tracks[0] = new TSTrack(0,
+            TrackType.AUDIO, Track.MIME_TYPE_AAC,
+            new PESReader(0, MptsElementaryStreamType.TS_STREAM_TYPE_AAC));
+        this.tracks[0].pes.appendPacket(false, streamReader);
     }
 
     private _findContainerType(): void {
 
-        if (this._containerType !== CONTAINER_TYPE.UNKNOWN) return;
+        if (this._containerType !== MpegContainerType.UNKNOWN) return;
 
         while (this._dataOffset < this._data.byteLength) {
             if (this._data[this._dataOffset] === MpegTSDemuxer.MPEGTS_SYNC) {
-                this._containerType = CONTAINER_TYPE.MPEG_TS;
+                this._containerType = MpegContainerType.MPEG_TS;
                 break;
-            } else if ((this._data.byteLength - this._dataOffset) >= 4) {
+            }
+
+            // Q: Makes sense supporting this here, or better in specific demux impl?
+            // Doing that in this way relates mostly to handling transparently
+            // HLS segments probably. But generally doesnt really give any gain
+            // to support plain ADTS/AAC as a container in an MPEG-TS demuxer?
+            // Format detection should be done on the payload before creating
+            // any specific demuxer for it?
+            // For sure, this current code-path may rather spawn unexpected side-effects,
+            // while being an extreme corner-case on usage side.
+            /*
+            else if ((this._data.byteLength - this._dataOffset) >= 4) {
                 const dataRead: number = (this._data[this._dataOffset] << 8) | (this._data[this._dataOffset + 1]);
                 if (dataRead === 0x4944 || (dataRead & 0xfff6) === 0xfff0) {
-                    this._containerType = CONTAINER_TYPE.RAW_AAC;
+                    this._containerType = MpegContainerType.RAW_AAC;
                     break;
                 }
             }
+            */
+
             this._dataOffset++;
         }
 
-        if (this._containerType === CONTAINER_TYPE.UNKNOWN) {
-            throw new Error('Format not supported');
+        if (this._containerType === MpegContainerType.UNKNOWN) {
+            throw new Error('Transport stream packets format not recognized');
         }
     }
 
-    private _readPackets(): void {
+    private _parseTsPackets(): void {
         // run as long as there is at least a full packet in buffer
         while ((this._data.byteLength - this._dataOffset) >= MpegTSDemuxer.MPEGTS_PACKET_SIZE) {
 
@@ -157,11 +159,11 @@ export class MpegTSDemuxer implements IDemuxer {
             const packet: Uint8Array = this._data.subarray(this._dataOffset + 1,
                 this._dataOffset + MpegTSDemuxer.MPEGTS_PACKET_SIZE);
             this._dataOffset += MpegTSDemuxer.MPEGTS_PACKET_SIZE;
-            this._processTsPacket(packet);
+            this._readTsPacket(packet);
         }
     }
 
-    private _processTsPacket(packet: Uint8Array): void {
+    private _readTsPacket(packet: Uint8Array): void {
 
         this._packetsCount++;
 

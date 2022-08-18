@@ -50,15 +50,11 @@ export class Mp4Demuxer implements IDemuxer {
     public append(data: Uint8Array): void {
         this.atoms = this._parseAtoms(data);
 
-        // "HACK" digest any last sample-table
+        // digest any last sample-table
         this._digestSampleTable();
-
-        this._updateTracks();
     }
 
-    public end(): void {
-        this._updateTracks();
-    }
+    public end(): void {}
 
     public flush() {
         this.atoms.length = 0;
@@ -71,14 +67,6 @@ export class Mp4Demuxer implements IDemuxer {
 
     public getAtoms(): Atom[] {
         return this.atoms;
-    }
-
-    private _updateTracks(): void {
-        for (const trackId in this.tracks) {
-            if (this.tracks.hasOwnProperty(trackId)) {
-                this.tracks[trackId].update();
-            }
-        }
     }
 
     private _parseAtoms(data: Uint8Array, offset: number = 0): Atom[] {

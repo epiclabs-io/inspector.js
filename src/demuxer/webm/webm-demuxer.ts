@@ -43,13 +43,9 @@ export class WebMDemuxer implements IDemuxer {
             this.data = this.data.subarray(this.dataOffset);
             this.dataOffset = 0;
         }
-
-        this.updateTracks();
     }
 
-    public end(): void {
-        this.updateTracks();
-    }
+    public end(): void {}
 
     private parseElements(end: number): EbmlElement[] {
         const elements: EbmlElement[] = [];
@@ -203,13 +199,5 @@ export class WebMDemuxer implements IDemuxer {
             }
         }
         return null;
-    }
-
-    private updateTracks(): void {
-        for (const trackId in this.tracks) {
-            if (this.tracks.hasOwnProperty(trackId)) {
-                this.tracks[trackId].update();
-            }
-        }
     }
 }

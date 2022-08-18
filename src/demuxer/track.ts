@@ -23,6 +23,7 @@ export abstract class Track {
     public static MIME_TYPE_ID3: string = 'application/id3';
     public static MIME_TYPE_UNKNOWN: string = 'unknown';
 
+    // not used by TS-track subclass ...
     protected frames: Frame[] = [];
 
     private _timeScale: number = NaN;
@@ -33,12 +34,6 @@ export abstract class Track {
 
     public isAv() {
         return this.type === TrackType.AUDIO || this.type === TrackType.VIDEO;
-    }
-
-    public update(): void {
-        this.frames = this.getFrames().sort((a: Frame, b: Frame): number => {
-            return a.dts - b.dts;
-        });
     }
 
     public flush() {
