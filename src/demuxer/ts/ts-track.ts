@@ -21,6 +21,4 @@ export class TSTrack extends Track {
     popFrames(wholePayloadUnits: boolean = true): Frame[] {
         return this.pes?.payloadReader?.popFrames(wholePayloadUnits) || [];
     }
-
-
 }
