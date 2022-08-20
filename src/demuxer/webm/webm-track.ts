@@ -9,6 +9,8 @@ import { Vint, EbmlElement } from './ebml/ebml-types';
 
 export class WebMTrack extends Track {
 
+    private _frames: Frame[];
+
     private lastPts: number;
     private nsPerFrame: number;
     private lastTimecodeBase: number;
@@ -21,14 +23,19 @@ export class WebMTrack extends Track {
         const codec: string = info.CodecName || WebMTrack.getCodecNameFromID(info.CodecID);
         super(info.TrackNumber, type, type + '/' + codec);
 
+        // explicit init after super-call needed
+        this._frames = [];
+        this.lastPts = 0;
+        this.lastTimecodeBase = 0;
+
         this.type = type;
         this.codec = codec;
         this.metadata = metadata;
-        this.lastPts = 0;
         this.nsPerFrame = info.DefaultDuration;
-        this.lastTimecodeBase = 0;
         this.timecodeScale = info.TrackTimecodeScale;
     }
+
+    get frames() { return this._frames; }
 
     private static getType(type: number): TrackType {
         switch (type) {
@@ -67,7 +74,7 @@ export class WebMTrack extends Track {
     }
 
     public getFrames(): Frame[] {
-        return this.frames;
+        return this._frames;
     }
 
     public getMetadata(): any { // FIXME: Seems this is the only implementation and it violates the base-class return-type
@@ -106,13 +113,13 @@ export class WebMTrack extends Track {
         this.lastPts = 1000 * ((this.lastTimecodeBase + timecode) / (this.timecodeScale > 0 ? this.timecodeScale : 1));
 
         if (element.name === 'SimpleBlock' && flags & 0x80) {
-            this.frames.push(new Frame(
+            this._frames.push(new Frame(
                 FRAME_TYPE.I,
                 this.lastPts, 0, 0,
                 buffer.length
             ));
         } else {
-            this.frames.push(new Frame(
+            this._frames.push(new Frame(
                 FRAME_TYPE.P,
                 this.lastPts, 0, 0,
                 buffer.length

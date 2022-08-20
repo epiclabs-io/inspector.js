@@ -18,6 +18,8 @@ export type Mp4TrackDefaults = {
 
 export class Mp4Track extends Track {
 
+    private _frames: Frame[] = [];
+
     private baseDataOffset: number = 0;
     private baseMediaDecodeTime: number = 0;
 
@@ -44,6 +46,8 @@ export class Mp4Track extends Track {
         }
     }
 
+    get frames() { return this._frames; }
+
     /**
      * post: endDts ie duration incremented by frame duration
      * @param frame
@@ -51,7 +55,7 @@ export class Mp4Track extends Track {
      */
     public appendFrame(frame: Frame) {
         this.endDts += frame.duration;
-        this.frames.push(frame);
+        this._frames.push(frame);
     }
 
     public flush() {
@@ -66,8 +70,8 @@ export class Mp4Track extends Track {
     }
 
     public getDuration() {
-        return this.frames.length ?
-            this.endDts - this.frames[0].dts : 0;
+        return this._frames.length ?
+            this.endDts - this._frames[0].dts : 0;
     }
 
     public getDurationInSeconds() {

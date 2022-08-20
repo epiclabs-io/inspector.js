@@ -10,12 +10,10 @@ export class TSTrack extends Track {
         super(id, type, mimeType);
     }
 
+    get frames() { return this?.pes?.payloadReader.frames || []; }
+
     getResolution(): [number, number] {
         return [0, 0];
-    }
-
-    getFrames(): Frame[] {
-        return this?.pes?.payloadReader.frames || [];
     }
 
     popFrames(wholePayloadUnits: boolean = true): Frame[] {

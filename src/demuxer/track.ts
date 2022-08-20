@@ -23,14 +23,13 @@ export abstract class Track {
     public static MIME_TYPE_ID3: string = 'application/id3';
     public static MIME_TYPE_UNKNOWN: string = 'unknown';
 
-    // not used by TS-track subclass ...
-    protected frames: Frame[] = [];
-
     private _timeScale: number = NaN;
 
     constructor(public id: number,
         public type: TrackType,
         public mimeType: string) {}
+
+    abstract readonly frames: Frame[];
 
     public isAv() {
         return this.type === TrackType.AUDIO || this.type === TrackType.VIDEO;
