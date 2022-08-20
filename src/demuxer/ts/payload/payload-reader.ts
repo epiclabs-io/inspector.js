@@ -82,15 +82,25 @@ export abstract class PayloadReader {
     }
 
     public popFrames(wholePayloadUnits: boolean = true): Frame[] {
+        // determine number of frames to splice
         let numFrames = wholePayloadUnits ? this._lastPusiFramesLen : this.frames.length;
-        // shortcut fast case opti
+        // early return shortcut opti:
         if (numFrames === 0) return [];
+
         // split-slice frame-list:
         // returns slice to pop, mutates list to remainder (deletes sliced items)
         const frames = this.frames.splice(0, numFrames);
-        // set current payload-unit frame-count to remainder length
+
+        // reset pusi related counters:
+        //
+        // note: prior bug would erraticaly set this to remainder length,
+        // which would cause popFrames to return frames not yet completed in buffer,
+        // thus bringing frame output and actual payload out of whack and
+        // therefore making the assumptions upon PES packet segmentation made on parsing input
+        // to fail in runtime assertions.
         this._lastPusiFramesLen = 0;
         this._pusiCount = 0;
+
         return frames;
     }
 }
