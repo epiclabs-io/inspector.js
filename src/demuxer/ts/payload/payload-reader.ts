@@ -83,12 +83,13 @@ export abstract class PayloadReader {
 
     public popFrames(wholePayloadUnits: boolean = true): Frame[] {
         let numFrames = wholePayloadUnits ? this._lastPusiFramesLen : this.frames.length;
+        // shortcut fast case opti
         if (numFrames === 0) return [];
         // split-slice frame-list:
         // returns slice to pop, mutates list to remainder (deletes sliced items)
         const frames = this.frames.splice(0, numFrames);
         // set current payload-unit frame-count to remainder length
-        this._lastPusiFramesLen = this.frames.length;
+        this._lastPusiFramesLen = 0;
         this._pusiCount = 0;
         return frames;
     }
