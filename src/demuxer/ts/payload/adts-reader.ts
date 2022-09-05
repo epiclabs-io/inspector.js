@@ -22,6 +22,16 @@ enum AdtsReaderState {
 
 const ADTS_HEADER_LEN_WITH_CRC = ADTS_HEADER_LEN + ADTS_CRC_SIZE;
 
+// some popular encoders set this to MPEG2 still, even though sending AAC.
+// performing the assertion (that expects MP4A compliant i.e unset),
+// will then lead to an error and failure to parse every frame then.
+// by default we skip this assertion to be more tolerant of either encoders,
+// and assume payload advertisement is done in PMT either way and content
+// validated/detected to be AAC downstream further anyhow.
+// Therefore:
+// Only enable this, if you know you need the parser to fail on input data where the bit is set wrongly.
+const ADTS_HEADER_ASSERT_MPEG_VERSION = false;
+
 export interface AdtsFrameInfo {
     aacObjectType: number;
     channels: number;
@@ -212,7 +222,7 @@ export class AdtsReader extends PayloadReader {
         reader.skipBits(12);
 
         const mpegVersion: number = reader.readBool() ? 1 : 0; // MPEG Version: 0 for MPEG-4, 1 for MPEG-2
-        if (mpegVersion !== 0) {
+        if (ADTS_HEADER_ASSERT_MPEG_VERSION && mpegVersion !== 0) {
             throw new Error(`Expected in header-data MPEG-version flag = 0 (only MP4-audio supported), but signals MPEG-2!`);
         }
 
