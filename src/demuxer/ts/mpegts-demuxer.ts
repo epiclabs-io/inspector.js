@@ -29,6 +29,11 @@ export class MpegTSDemuxer implements IDemuxer {
     private _pmtId: number = NaN;
     private _pmtParsed: boolean = false;
 
+    /**
+     * Either mutation of this property only applies to any track created *after*.
+     */
+    public enableWrapOver32BitClock: boolean = true;
+
     get currentBufferSize(): number {
         return this._data?.byteLength || 0;
     }
@@ -234,7 +239,9 @@ export class MpegTSDemuxer implements IDemuxer {
             packetParser.skipBytes(infoLength);
             bytesRemaining -= infoLength + 5;
             if (!this.tracks[elementaryPid]) {
-                const pes: PESReader = new PESReader(elementaryPid, streamType);
+
+                const pesReader: PESReader = new PESReader(elementaryPid, streamType, this.enableWrapOver32BitClock);
+
                 let type: TrackType;
                 let mimeType: string;
                 if (streamType === MptsElementaryStreamType.TS_STREAM_TYPE_AAC) {
@@ -257,7 +264,7 @@ export class MpegTSDemuxer implements IDemuxer {
                     type = TrackType.UNKNOWN;
                     mimeType = Track.MIME_TYPE_UNKNOWN;
                 }
-                this.tracks[elementaryPid] = new TSTrack(elementaryPid, type, mimeType, pes);
+                this.tracks[elementaryPid] = new TSTrack(elementaryPid, type, mimeType, pesReader);
             }
         }
         this._pmtParsed = true;
