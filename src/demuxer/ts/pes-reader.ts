@@ -18,6 +18,8 @@ export enum MptsElementaryStreamType {
     TS_STREAM_TYPE_PACKETIZED_DATA = 0x06
 }
 
+const MP4_BASE_MEDIA_DTS_32BIT_RANGE = Math.pow(2, 32) - 1;
+
 export class PESReader {
 
     public payloadReader: PayloadReader;
@@ -25,7 +27,8 @@ export class PESReader {
     private currentDts: number = NaN;
     private currentCto: number = NaN;
 
-    constructor(public pid: number, public type: MptsElementaryStreamType) {
+    constructor(public pid: number, public type: MptsElementaryStreamType,
+        private _timeWrapOver32BitMp4Range: boolean = true) {
 
         switch(type) {
         case MptsElementaryStreamType.TS_STREAM_TYPE_AAC:
@@ -100,7 +103,12 @@ export class PESReader {
 
         // parses the optional header section.
         // reads the packet up to the data section in every case.
-        const [dts, pts] = parsePesHeaderOptionalFields(packet);
+        let [dts, pts] = parsePesHeaderOptionalFields(packet);
+
+        if (this._timeWrapOver32BitMp4Range) {
+            dts %= MP4_BASE_MEDIA_DTS_32BIT_RANGE;
+            pts %= MP4_BASE_MEDIA_DTS_32BIT_RANGE;
+        }
 
         this.currentDts = dts;
         this.currentCto = pts - dts;
