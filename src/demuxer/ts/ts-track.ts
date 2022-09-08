@@ -10,6 +10,15 @@ export class TSTrack extends Track {
         super(id, type, mimeType);
     }
 
+    public toJSON(): string {
+        const { id, type, mimeType } = this;
+        return JSON.stringify({
+            id,
+            type,
+            mimeType
+        });
+    }
+
     get frames() { return this?.pes?.payloadReader.frames || []; }
 
     getResolution(): [number, number] {
