@@ -112,7 +112,7 @@ export class MpegTSDemuxer implements IDemuxer {
         const streamReader: BitReader = new BitReader(this._data);
         this.tracks[0] = new TSTrack(0,
             TrackType.AUDIO, Track.MIME_TYPE_AAC,
-            new PESReader(0, MptsElementaryStreamType.TS_STREAM_TYPE_AAC));
+            new PESReader(0, MptsElementaryStreamType.TS_STREAM_TYPE_AAC, false));
         this.tracks[0].pes.appendPacket(false, streamReader);
     }
 
