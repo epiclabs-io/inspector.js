@@ -12,6 +12,8 @@ enum MpegContainerType {
     RAW_MPEG_AUDIO
 }
 
+const ENABLE_WRAP_OVER_CLOCK_32BIT = true;
+
 export class MpegTSDemuxer implements IDemuxer {
 
     private static MPEGTS_SYNC: number = 0x47;
@@ -32,7 +34,7 @@ export class MpegTSDemuxer implements IDemuxer {
     /**
      * Either mutation of this property only applies to any track created *after*.
      */
-    public enableWrapOver32BitClock: boolean = true;
+    public enableWrapOver32BitClock: boolean = ENABLE_WRAP_OVER_CLOCK_32BIT;
 
     get currentBufferSize(): number {
         return this._data?.byteLength || 0;

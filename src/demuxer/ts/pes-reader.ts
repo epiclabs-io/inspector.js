@@ -28,7 +28,7 @@ export class PESReader {
     private currentCto: number = NaN;
 
     constructor(public pid: number, public type: MptsElementaryStreamType,
-        private _timeWrapOver32BitMp4Range: boolean = true) {
+        private _timeWrapOver32BitMp4Range: boolean) {
 
         switch(type) {
         case MptsElementaryStreamType.TS_STREAM_TYPE_AAC:
@@ -105,12 +105,7 @@ export class PESReader {
         // reads the packet up to the data section in every case.
         let [dts, pts] = parsePesHeaderOptionalFields(packet);
 
-        if (this._timeWrapOver32BitMp4Range) {
-            dts %= MP4_BASE_MEDIA_DTS_32BIT_RANGE;
-            pts %= MP4_BASE_MEDIA_DTS_32BIT_RANGE;
-        }
-
-        this.currentDts = dts;
+        this.currentDts = this._timeWrapOver32BitMp4Range ? dts % MP4_BASE_MEDIA_DTS_32BIT_RANGE : dts;
         this.currentCto = pts - dts;
     }
 
