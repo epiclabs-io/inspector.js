@@ -58,24 +58,25 @@ export function parsePesHeaderOptionalFields(packet: BitReader): [number, number
     let pts = NaN;
     let dts = NaN;
     if (ptsDtsFlags & 0xC0) {
+
         // the PTS and DTS are not written out directly. For information
         // on how they are encoded, see
         // http://dvd.sourceforge.net/dvdinfo/pes-hdr.html
+        let lastByte;
         pts = (packet.readByte() & 0x0E) << 27 |
             (packet.readByte() & 0xFF) << 20 |
             (packet.readByte() & 0xFE) << 12 |
             (packet.readByte() & 0xFF) <<  5 |
-            (packet.readByte() & 0xFE) >>>  3;
+            ((lastByte = packet.readByte()) & 0xFE) >>>  3;
         pts *= 4; // Left shift by 2
-        pts += (packet.readByte() & 0x06) >>> 1; // OR by the two LSBs
+        pts += (lastByte & 0x06) >>> 1; // OR by the two LSBs
         dts = pts;
         if (ptsDtsFlags & 0x40) {
-            let lastByte;
             dts = (packet.readByte() & 0x0E) << 27 |
             (packet.readByte() & 0xFF) << 20 |
             (packet.readByte() & 0xFE) << 12 |
             (packet.readByte() & 0xFF) << 5 |
-            (lastByte = packet.readByte() & 0xFE) >>> 3;
+            ((lastByte = packet.readByte()) & 0xFE) >>> 3;
             dts *= 4; // Left shift by 2
             dts += (lastByte & 0x06) >>> 1; // OR by the two LSBs
         }
