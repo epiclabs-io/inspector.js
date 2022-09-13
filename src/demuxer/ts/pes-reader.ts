@@ -105,8 +105,13 @@ export class PESReader {
         // reads the packet up to the data section in every case.
         let [dts, pts] = parsePesHeaderOptionalFields(packet);
 
+        const cto = pts - dts;
+        if (cto < 0) {
+            throw new Error(`Computed CTO < 0 with DTS = ${dts} (${mpegClockTimeToSecs(dts)} [s]) / PTS = ${pts} (${mpegClockTimeToSecs(pts)} [s])`);
+        }
+
         this.currentDts = this._timeWrapOver32BitMp4Range ? dts % MP4_BASE_MEDIA_DTS_32BIT_RANGE : dts;
-        this.currentCto = pts - dts;
+        this.currentCto = cto;
     }
 
     private _handlePayloadReadData(data: Uint8Array, dts: number, cto: number, naluType: number = NaN) {
