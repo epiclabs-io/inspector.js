@@ -1,5 +1,4 @@
 import { FRAME_TYPE } from "../codecs/h264/nal-units";
-import { toSecondsFromMicros } from "../utils/timescale";
 
 export class Frame {
 

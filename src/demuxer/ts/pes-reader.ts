@@ -7,6 +7,7 @@ import { H264Reader } from './payload/h264-reader';
 import { ID3Reader } from './payload/id3-reader';
 import { MpegReader } from './payload/mpeg-reader';
 import { parsePesHeaderOptionalFields } from './payload/pes-header';
+import { mpegClockTimeToSecs } from '../../utils/timescale';
 
 export enum MptsElementaryStreamType {
     TS_STREAM_TYPE_AAC = 0x0F,
