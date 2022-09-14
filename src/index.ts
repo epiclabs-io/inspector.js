@@ -11,7 +11,7 @@ export { IDemuxer, TracksHash } from './demuxer/demuxer';
 export { Track } from './demuxer/track';
 export { Frame } from './demuxer/frame';
 export { Atom, ContainerAtom } from './demuxer/mp4/atoms/atom';
-export { TSTrack } from './demuxer/ts/ts-track';
+export { MpegTSTrack as TSTrack } from './demuxer/ts/ts-track';
 
 export function createMpegTSDemuxer(): MpegTSDemuxer { // Q: these methods should return IDemuxer to maintain abstraction solid?
     return new MpegTSDemuxer();

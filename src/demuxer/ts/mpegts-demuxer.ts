@@ -2,7 +2,7 @@ import { IDemuxer } from '../demuxer';
 import { Track, TrackType } from '../track';
 
 import { MptsElementaryStreamType, PESReader } from './pes-reader';
-import { TSTrack } from './ts-track';
+import { MpegTSTrack } from './ts-track';
 import { BitReader } from '../../utils/bit-reader';
 
 enum MpegContainerType {
@@ -14,12 +14,14 @@ enum MpegContainerType {
 
 const ENABLE_WRAP_OVER_CLOCK_32BIT = true;
 
+export type MpegTSTracksHash = { [id: number] : MpegTSTrack; }
+
 export class MpegTSDemuxer implements IDemuxer {
 
     private static MPEGTS_SYNC: number = 0x47;
     private static MPEGTS_PACKET_SIZE: number = 188;
 
-    public tracks: { [id: number] : TSTrack; } = {};
+    private _tracks: MpegTSTracksHash = {};
 
     private _containerType: MpegContainerType = MpegContainerType.UNKNOWN;
 
@@ -46,6 +48,14 @@ export class MpegTSDemuxer implements IDemuxer {
 
     get isProgramMapUpdated(): boolean {
         return this._pmtParsed;
+    }
+
+    get tracks(): MpegTSTracksHash {
+        return { ... this._tracks };
+    }
+
+    get numberOfTracks(): number {
+      return Object.keys(this._tracks).length;
     }
 
     public append(data: Uint8Array, pruneAfterParse: boolean = false): Uint8Array | null  {
@@ -110,10 +120,10 @@ export class MpegTSDemuxer implements IDemuxer {
 
     private _parseRawEsPackets() {
         const streamReader: BitReader = new BitReader(this._data);
-        this.tracks[0] = new TSTrack(0,
+        this._tracks[0] = new MpegTSTrack(0,
             TrackType.AUDIO, Track.MIME_TYPE_AAC,
             new PESReader(0, MptsElementaryStreamType.TS_STREAM_TYPE_AAC, false));
-        this.tracks[0].pes.appendPacket(false, streamReader);
+        this._tracks[0].pes.appendPacket(false, streamReader);
     }
 
     private _findContainerType(): void {
@@ -203,7 +213,7 @@ export class MpegTSDemuxer implements IDemuxer {
             } else if (pid === this._pmtId) {
                 this._parseProgramMapTable(payloadUnitStartIndicator, packetReader);
             } else {
-                const track: TSTrack = this.tracks[pid];
+                const track: MpegTSTrack = this._tracks[pid];
                 // handle case where PID not found?
                 if (track && track.pes) {
                     track.pes.appendPacket(payloadUnitStartIndicator, packetReader);
@@ -232,6 +242,10 @@ export class MpegTSDemuxer implements IDemuxer {
         packetParser.skipBytes(programInfoLength);
         let bytesRemaining: number = sectionLength - 9 - programInfoLength - 4;
 
+        if (bytesRemaining <= 0) {
+            throw new Error(`PMT packet-parser: bytesRemaining = ${bytesRemaining} after packet header (no entries data)`);
+        }
+
         while (bytesRemaining > 0) {
             const streamType: number = packetParser.readBits(8);
             packetParser.skipBits(3);
@@ -240,7 +254,8 @@ export class MpegTSDemuxer implements IDemuxer {
             const infoLength: number = packetParser.readBits(12);
             packetParser.skipBytes(infoLength);
             bytesRemaining -= infoLength + 5;
-            if (!this.tracks[elementaryPid]) {
+
+            if (!this._tracks[elementaryPid]) {
 
                 const pesReader: PESReader = new PESReader(elementaryPid, streamType, this.enableWrapOver32BitClock);
 
@@ -266,10 +281,16 @@ export class MpegTSDemuxer implements IDemuxer {
                     type = TrackType.UNKNOWN;
                     mimeType = Track.MIME_TYPE_UNKNOWN;
                 }
-                this.tracks[elementaryPid] = new TSTrack(elementaryPid, type, mimeType, pesReader);
+                this._tracks[elementaryPid] = new MpegTSTrack(elementaryPid, type, mimeType, pesReader);
             }
         }
+
         this._pmtParsed = true;
+
+        if(this.numberOfTracks === 0) {
+            throw new Error('Parsed new PMT but have zero tracks')
+        }
+
         this.onProgramMapUpdate();
     }
 }

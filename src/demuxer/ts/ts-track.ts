@@ -2,7 +2,7 @@ import { Track, TrackType } from '../track';
 import { Frame } from '../frame';
 import { PESReader } from './pes-reader';
 
-export class TSTrack extends Track {
+export class MpegTSTrack extends Track {
 
     constructor(id: number, type: TrackType, mimeType: string,
         public pes: PESReader) {
