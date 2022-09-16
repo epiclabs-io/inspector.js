@@ -4,6 +4,7 @@ import { Track, TrackType } from '../track';
 import { MptsElementaryStreamType, PESReader } from './pes-reader';
 import { MpegTSTrack } from './ts-track';
 import { BitReader } from '../../utils/bit-reader';
+import { parsePsiPacketHeader } from './psi-header';
 
 enum MpegContainerType {
     UNKNOWN,
@@ -30,7 +31,7 @@ export class MpegTSDemuxer implements IDemuxer {
 
     private _packetsCount: number = 0;
 
-    private _pmtId: number = NaN;
+    private _programMapPid: number = NaN;
     private _pmtParsed: boolean = false;
 
     /**
@@ -210,7 +211,7 @@ export class MpegTSDemuxer implements IDemuxer {
         if (adaptationField === 1 || adaptationField === 3) {
             if (pid === 0) {
                 this._parseProgramAllocationTable(payloadUnitStartIndicator, packetReader);
-            } else if (pid === this._pmtId) {
+            } else if (pid === this._programMapPid) {
                 this._parseProgramMapTable(payloadUnitStartIndicator, packetReader);
             } else {
                 const track: MpegTSTrack = this._tracks[pid];
@@ -223,37 +224,57 @@ export class MpegTSDemuxer implements IDemuxer {
     }
 
     private _parseProgramAllocationTable(payloadUnitStartIndicator: boolean, packetParser: BitReader): void {
-        if (payloadUnitStartIndicator) {
-            packetParser.skipBytes(packetParser.readByte());
+        const tableDataLength = parsePsiPacketHeader(packetParser, payloadUnitStartIndicator);
+
+        let bytesRemaining = tableDataLength;
+        while (bytesRemaining > 0) {
+
+            /**
+             * Program num 	16 	Relates to the Table ID extension in the associated PMT. A value of 0 is reserved for a NIT packet identifier.
+                Reserved bits 	3 	Set to 0x07 (all bits on)
+                Program map PID 	13 	The packet identifier that contains the associated PMT
+             */
+            const programNum = packetParser.readBits(16);
+            packetParser.readBits(3); // skip reserved bits
+            const pid = packetParser.readBits(13);
+            // other progam-numbers than 0 specifiy PMT, we expect to find an entry for this in each PAT.
+            // optional entry with 1 is reserved for NIT (network info), where other PSI table types are carried, e.g SIT.
+            if (programNum !== 0) {
+                this._programMapPid = pid;
+            }
+            bytesRemaining -= 4;
         }
-        packetParser.skipBits(27 + 7 * 8);
-        this._pmtId = packetParser.readBits(13);
     }
 
     private _parseProgramMapTable(payloadUnitStartIndicator: boolean, packetParser: BitReader): void {
-        if (payloadUnitStartIndicator) {
-            packetParser.skipBytes(packetParser.readByte());
-        }
+        const tableDataLength = parsePsiPacketHeader(packetParser, payloadUnitStartIndicator);
 
-        packetParser.skipBits(12);
-        const sectionLength: number = packetParser.readBits(12);
-        packetParser.skipBits(4 + 7 * 8);
-        const programInfoLength: number = packetParser.readBits(12);
+        /**
+         *  Reserved bits 	3 	Set to 0x07 (all bits on)
+            PCR PID 	13 	If this is unused. then it is set to 0x1FFF (all bits on).
+            Reserved bits 	4 	Set to 0x0F (all bits on)
+            Program info length unused bits 	2 	Set to 0 (all bits off)
+         */
+
+        packetParser.skipBits(3); // reserved bits 0x07
+        const pcrPid = packetParser.readBits(13); // PCR PID
+        packetParser.skipBits(4); // reserved bits 0x0F
+        packetParser.skipBits(2); // Program info length unused bits
+
+        const programInfoLength: number = packetParser.readBits(10);
         packetParser.skipBytes(programInfoLength);
-        let bytesRemaining: number = sectionLength - 9 - programInfoLength - 4;
 
-        if (bytesRemaining <= 0) {
-            throw new Error(`PMT packet-parser: bytesRemaining = ${bytesRemaining} after packet header (no entries data)`);
-        }
-
+        let bytesRemaining: number = tableDataLength - programInfoLength - 4; // 4 bytes from PMT header fields above
         while (bytesRemaining > 0) {
+
             const streamType: number = packetParser.readBits(8);
             packetParser.skipBits(3);
             const elementaryPid: number = packetParser.readBits(13);
             packetParser.skipBits(4);
             const infoLength: number = packetParser.readBits(12);
             packetParser.skipBytes(infoLength);
-            bytesRemaining -= infoLength + 5;
+
+            bytesRemaining -= infoLength + 5; // 5 bytes fields parsed above
 
             if (!this._tracks[elementaryPid]) {
 
@@ -270,7 +291,8 @@ export class MpegTSDemuxer implements IDemuxer {
                 } else if (streamType === MptsElementaryStreamType.TS_STREAM_TYPE_ID3) {
                     type = TrackType.TEXT;
                     mimeType = Track.MIME_TYPE_ID3;
-                } else if (streamType === MptsElementaryStreamType.TS_STREAM_TYPE_MPA || streamType === MptsElementaryStreamType.TS_STREAM_TYPE_MPA_LSF) {
+                } else if (streamType === MptsElementaryStreamType.TS_STREAM_TYPE_MPA
+                    || streamType === MptsElementaryStreamType.TS_STREAM_TYPE_MPA_LSF) {
                     type = TrackType.AUDIO;
                     mimeType = Track.MIME_TYPE_MPEG;
                 } else if (streamType === MptsElementaryStreamType.TS_STREAM_TYPE_METADATA) {
