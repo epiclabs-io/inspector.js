@@ -4,12 +4,12 @@ import { NalUnit, NalUnitsArray } from '../../../codecs/h265/nal-unit';
 
 export class HvcC extends Atom {
     public version: number;
-    public profileSpace: number;
-    public tierFlag: number;
-    public profileIdc: number;
-    public profileCompatibility: number;
-    public constraintIndicator: Uint8Array;
-    public levelIdc: number;
+    public generalProfileSpace: number;
+    public generalTierFlag: number;
+    public generalProfileIdc: number;
+    public generalProfileCompatibility: number;
+    public generalConstraintIndicator: Uint8Array;
+    public generalLevelIdc: number;
     public spatialSegmentationIdc: number;
     public parallelismType: number;
     public chromaFormat: number;
@@ -29,13 +29,13 @@ export class HvcC extends Atom {
         hvcC.version = data[0];
 
         aux = data[1];
-        hvcC.profileSpace = aux >> 6;
-        hvcC.tierFlag = (aux & 0x20) >> 5;
-        hvcC.profileIdc = (aux & 0x1F);
+        hvcC.generalProfileSpace = (aux >> 6) & 0x03;
+        hvcC.generalTierFlag = (aux >> 5) & 0x01;
+        hvcC.generalProfileIdc = aux & 0x1F;
 
-        hvcC.profileCompatibility = ByteParserUtils.parseUint32(data, 2);
-        hvcC.constraintIndicator = data.subarray(6, 12);
-        hvcC.levelIdc = data[12];
+        hvcC.generalProfileCompatibility = ByteParserUtils.parseUint32(data, 2);
+        hvcC.generalConstraintIndicator = data.subarray(6, 12);
+        hvcC.generalLevelIdc = data[12];
         hvcC.spatialSegmentationIdc = ByteParserUtils.parseUint16(data, 13) & 0xFFF;
         hvcC.parallelismType = (data[15] & 0x3);
         hvcC.chromaFormat = (data[16] & 0x3);
@@ -44,10 +44,10 @@ export class HvcC extends Atom {
         hvcC.avgFrameRate = ByteParserUtils.parseUint16(data, 19);
 
         aux = data[21];
-        hvcC.constantFrameRate = (aux >> 6);
-        hvcC.numTemporalLayers = (aux & 0XD) >> 3;
-        hvcC.temporalIdNested = (aux & 0X4) >> 2;
-        hvcC.lengthSizeMinusOne = (aux & 0X3);
+        hvcC.constantFrameRate = (aux >> 6) & 0x03;
+        hvcC.numTemporalLayers = (aux >> 3) & 0x07;
+        hvcC.temporalIdNested = (aux >> 2) & 0x01;
+        hvcC.lengthSizeMinusOne = (aux & 0X3) + 1;
 
         hvcC.nalUnitsArrays = [];
         const naluArraysCount: number = data[22];
